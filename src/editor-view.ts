@@ -22,6 +22,15 @@ export class EditorView {
     await this.renderContent();
   }
 
+  /**
+   * Refresh only the tab bar (e.g. the unsaved-changes dot) WITHOUT rebuilding
+   * the content area. Used on every keystroke: rebuilding the <textarea> on
+   * input would destroy the caret position and jump the cursor to the end.
+   */
+  syncTabBar(): void {
+    this.renderTabBar();
+  }
+
   private renderTabBar(): void {
     const bar = document.getElementById('tabbar')!;
     bar.innerHTML = '';

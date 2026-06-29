@@ -37,7 +37,10 @@ listen<string>('file-changed', async (e) => {
 const view = new EditorView(contentEl, tabs, {
   onContentInput: (text) => {
     tabs.active?.setContent(text);
-    view.render();
+    // Only refresh the tab bar (dirty dot). Do NOT call view.render() here:
+    // rebuilding the <textarea> on every keystroke resets the caret to the end
+    // and wipes the native undo history (breaking Cmd+Z).
+    view.syncTabBar();
   },
   onActivate: (i) => {
     tabs.activate(i);
