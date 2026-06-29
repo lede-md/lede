@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { listen, emit } from '@tauri-apps/api/event';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { TabSet } from './tabs';
 import { Document } from './document';
@@ -108,7 +108,6 @@ listen<string>('menu-action', (e) => {
   actions.dispatch(e.payload);
 });
 
-// Dev seed so the UI is visible before open-routing exists (removed after Task 12).
 async function openPath(path: string): Promise<void> {
   const content = await invoke<string>('read_file', { path });
   const wasOpen = tabs.findByPath(path) >= 0;
@@ -116,6 +115,11 @@ async function openPath(path: string): Promise<void> {
   if (!wasOpen) await invoke('watch_file', { path });
   await view.render();
 }
-(window as any).__open = openPath; // manual smoke helper
 
+listen<string>('open-file', async (e) => {
+  await openPath(e.payload);
+});
+
+// Tell the backend this window's frontend is ready to receive open-file events.
+emit('frontend-ready');
 view.render();
