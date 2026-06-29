@@ -5,6 +5,8 @@ export interface EditorViewOpts {
   onActivate: (i: number) => void;
   onClose: (i: number) => void;
   renderMarkdown: (md: string) => Promise<string>;
+  pendingReload: (path: string) => boolean;
+  onReloadConfirm: (path: string) => void;
 }
 
 export class EditorView {
@@ -49,6 +51,20 @@ export class EditorView {
       empty.textContent = 'No file open. Use Cmd+O to open a markdown file.';
       content.appendChild(empty);
       return;
+    }
+    if (this.opts.pendingReload(doc.path)) {
+      const banner = document.createElement('div');
+      banner.className = 'banner';
+      const msg = document.createElement('span');
+      msg.textContent = 'This file changed on disk. Reload and lose your edits?';
+      const reload = document.createElement('button');
+      reload.textContent = 'Reload';
+      reload.addEventListener('click', () => this.opts.onReloadConfirm(doc.path));
+      const keep = document.createElement('button');
+      keep.textContent = 'Keep mine';
+      keep.addEventListener('click', () => this.opts.onReloadConfirm('')); // empty = dismiss
+      banner.append(msg, reload, keep);
+      content.appendChild(banner);
     }
     if (doc.view === 'source') {
       const ta = document.createElement('textarea');
