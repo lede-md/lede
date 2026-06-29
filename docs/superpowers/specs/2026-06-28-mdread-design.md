@@ -20,8 +20,13 @@ rendered preview**. No live WYSIWYG.
 - Watch the file so agent-driven changes appear automatically.
 - Multiple windows, each with multiple tabs.
 - Ship as a simple drag-to-install `.dmg`.
+- Update to new versions without manual reinstall (in-app updater + Homebrew).
 
-## Non-Goals (YAGNI)
+## Not in v1 (but architected for — see Extensibility)
+
+These are intentionally **out of scope for the first release**, but the design
+leaves clean seams so they can be added later without a rewrite. We do **not**
+build them now (YAGNI for v1); we just avoid decisions that would block them.
 
 - Live inline WYSIWYG rendering (Typora-style).
 - Plugins, themes beyond light/dark, custom CSS.
@@ -135,6 +140,83 @@ exits).
   (fallback `~/.local/bin`) that launches or signals the app with the file path.
   Install step documented; optionally a "Install CLI" menu item in the app.
 
+## Updates
+
+The first install always requires the one-time Gatekeeper bypass (right-click →
+Open) because the app is unsigned. Subsequent updates use **two complementary
+channels**:
+
+### 1. In-app auto-updater (Tauri updater plugin)
+
+- On launch (and via a "Check for Updates" menu item), the app fetches an update
+  **manifest** (JSON) hosted on **GitHub Releases**.
+- If a newer version exists, the UI shows "Update available → Restart to update."
+- The plugin downloads the new bundle, verifies it against a **minisign public
+  key** baked into the app (this signature is Tauri's own, independent of Apple
+  code signing — so it works without an Apple Developer account), swaps the app
+  bundle, and relaunches.
+- Because the updater writes the new bundle directly (not via a browser/Finder
+  download), it does not re-apply the macOS quarantine flag, so updated versions
+  launch without repeating the right-click → Open step.
+- **Key management:** the minisign **private key** is kept out of the repo (CI
+  secret / local secret); the **public key** lives in the Tauri config. The
+  release build signs the bundle and publishes the manifest.
+
+### 2. Homebrew cask
+
+- A cask in a tap (e.g. `<user>/homebrew-tap`) lets terminal users run
+  `brew install --cask mdread` and `brew upgrade`.
+- The cask points at the same GitHub Release `.dmg` artifacts; updating the cask
+  is bumping the version + sha256 (automatable in the release workflow).
+
+### Release flow (single source of truth)
+
+A `cargo tauri build` in CI produces the `.dmg` and the signed update artifacts,
+publishes them to a GitHub Release, updates the updater manifest, and bumps the
+Homebrew cask — so both channels serve the same version.
+
+## Extensibility (building v1 with the future in mind)
+
+We are **not** implementing the "Not in v1" features, but the following
+architectural seams are deliberately placed so each can be added later as an
+additive change rather than a rewrite. None of these add meaningful v1 cost —
+they are mostly about *where* code lives and *how modules talk*.
+
+- **Document model as a first-class abstraction.** A `Document` owns path,
+  content, dirty state, and watcher subscription; a `Window` owns an ordered
+  list of documents (tabs). Keeping tabs as a collection of `Document`s — rather
+  than hardcoding "one active file" — is what later makes a **file-tree sidebar
+  / multi-file project view** a UI addition, not a model change.
+
+- **Rendering as a standalone Rust module.** Markdown → HTML lives behind a
+  small `render(markdown) -> Html` interface. Since preview already produces
+  HTML, **export to HTML/PDF** later is "take the same HTML and write it / run
+  it through a PDF step" — no new rendering path. The interface also leaves room
+  to swap/augment the renderer (e.g. footnotes, tables) without touching callers.
+
+- **Editor view behind a view interface.** The source editor and preview are two
+  implementations of a "tab view." A future **WYSIWYG view** becomes a third
+  implementation toggled the same way — feasible precisely because the UI is web
+  tech (mature JS editors exist), which was a factor in choosing Tauri.
+
+- **Theming via CSS custom properties.** All colors/typography go through CSS
+  variables with a light/dark switch in v1. **Custom themes** later = additional
+  variable sets + a picker; no restyling of components.
+
+- **Command/action layer.** Menu items, shortcuts, and CLI all dispatch named
+  actions (e.g. `document.save`, `view.togglePreview`) through one registry
+  rather than wiring handlers ad hoc. This is the natural seam for a future
+  **plugin** system and keeps v1's own shortcut wiring clean.
+
+- **No macOS-only assumptions in core logic.** File I/O, watching, rendering,
+  and the document model stay platform-neutral (Tauri already supports
+  Windows/Linux); only packaging, the CLI shim path, and Gatekeeper docs are
+  mac-specific. A future **Windows/Linux build** is then mostly a packaging
+  task. We still only build/test macOS in v1.
+
+These seams are documented so the implementation plan keeps the boundaries even
+under time pressure; they do not expand v1 feature scope.
+
 ## Testing
 
 - **Rust unit tests:**
@@ -151,3 +233,7 @@ exits).
   dedupe across windows. (Decided.)
 - **CLI install path:** `/usr/local/bin` with `~/.local/bin` fallback. (Decided,
   revisit if it causes permission friction.)
+- **Updates:** both in-app Tauri updater (GitHub Releases + minisign) and a
+  Homebrew cask, served from one CI release flow. (Decided.)
+- **Future features:** not built in v1, but architected for via the seams in
+  Extensibility. (Decided.)
