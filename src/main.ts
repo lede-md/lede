@@ -1,7 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
-import { open as openDialog } from '@tauri-apps/plugin-dialog';
+import { open as openDialog, ask, message } from '@tauri-apps/plugin-dialog';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 import { TabSet } from './tabs';
 import { Document } from './document';
 import { ActionRegistry } from './actions';
@@ -103,6 +105,26 @@ actions.register('tab.close', async () => {
 
 actions.register('window.new', async () => {
   await invoke('open_new_window'); // defined in Task 12
+});
+
+actions.register('app.checkForUpdates', async () => {
+  try {
+    const update = await check();
+    if (!update) {
+      await message('You are on the latest version.', { title: 'mdread' });
+      return;
+    }
+    const yes = await ask(
+      `Version ${update.version} is available. Update and restart now?`,
+      { title: 'Update available' },
+    );
+    if (yes) {
+      await update.downloadAndInstall();
+      await relaunch();
+    }
+  } catch (err) {
+    await message(`Update check failed: ${err}`, { title: 'mdread' });
+  }
 });
 
 listen<string>('menu-action', (e) => {

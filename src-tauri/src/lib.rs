@@ -16,6 +16,8 @@ pub fn run() {
             routing::route_open(app, paths, nw);
         }))
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(WatchState::new())
         .manage(routing::OpenState::new())
         .setup(|app| {
