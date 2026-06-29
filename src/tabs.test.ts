@@ -22,12 +22,21 @@ describe('TabSet', () => {
     expect(t.active?.path).toBe('/a.md');
   });
 
-  it('close removes and adjusts active index', () => {
+  it('close active tab keeps a valid active doc', () => {
     const t = new TabSet();
     t.open(doc('/a.md'));
     t.open(doc('/b.md'));
     t.activate(0);
     t.close(0);
+    expect(t.docs.length).toBe(1);
+    expect(t.active?.path).toBe('/b.md');
+  });
+
+  it('close before active decrements activeIndex', () => {
+    const t = new TabSet();
+    t.open(doc('/a.md')); // index 0
+    t.open(doc('/b.md')); // index 1, now active
+    t.close(0);           // close /a.md
     expect(t.docs.length).toBe(1);
     expect(t.active?.path).toBe('/b.md');
   });
