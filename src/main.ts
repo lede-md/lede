@@ -36,6 +36,14 @@ actions.register('view.togglePreview', () => {
   }
 });
 
+actions.register('document.save', async () => {
+  const d = tabs.active;
+  if (!d || !d.dirty) return;
+  await invoke('save_file', { path: d.path, content: d.content });
+  d.markSaved();
+  await view.render();
+});
+
 // Dev seed so the UI is visible before open-routing exists (removed after Task 12).
 async function openPath(path: string): Promise<void> {
   const content = await invoke<string>('read_file', { path });
