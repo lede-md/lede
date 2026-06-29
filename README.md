@@ -1,18 +1,28 @@
-# Tauri + Vanilla TS
+# mdread
 
-This template should help get you started developing with Tauri in vanilla HTML, CSS and Typescript.
+A minimal, fast macOS markdown editor: open a `.md` file, read it rendered,
+edit the source, toggle between them. Multiple windows, multiple tabs,
+auto-reload when an agent changes the file on disk.
 
-## Recommended IDE Setup
+## Install
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+1. Download `mdread.dmg` from Releases and drag **mdread** to Applications.
+2. First launch is blocked because the app is unsigned. Right-click
+   **mdread.app → Open**, then confirm. (Or run
+   `xattr -dr com.apple.quarantine /Applications/mdread.app`.)
+3. Optional CLI: `sudo cp cli/mdread /usr/local/bin/mdread`.
 
-## CLI
+Or via Homebrew: `brew install --cask OWNER/tap/mdread`.
 
-Install the `mdread` command:
+## Use
 
-```bash
-sudo cp cli/mdread /usr/local/bin/mdread   # or: cp cli/mdread ~/.local/bin/mdread
-```
+- `mdread notes.md` — open a file (new tab in the focused window).
+- `mdread --new-window notes.md` — open in a new window.
+- Double-click a `.md` in Finder, or drag it onto a window.
+- `Cmd+E` toggle preview · `Cmd+S` save · `Cmd+T` new tab · `Cmd+N` new window
+  · `Cmd+W` close tab.
 
-Then: `mdread notes.md` opens the file (new tab in the focused window),
-`mdread --new-window notes.md` opens it in a new window.
+## Updates
+
+mdread checks for updates on demand (mdread → Check for Updates…) and installs
+them in place. Homebrew users can `brew upgrade`.

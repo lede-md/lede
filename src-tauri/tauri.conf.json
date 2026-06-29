@@ -24,7 +24,19 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["dmg", "app"],
+    "createUpdaterArtifacts": true,
+    "category": "public.app-category.productivity",
+    "shortDescription": "Minimal markdown reader/editor",
+    "macOS": { "minimumSystemVersion": "11.0" },
+    "fileAssociations": [
+      {
+        "ext": ["md", "markdown", "mdown"],
+        "name": "Markdown Document",
+        "role": "Editor",
+        "mimeType": "text/markdown"
+      }
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
