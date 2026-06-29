@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { TabSet } from './tabs';
 import { Document } from './document';
 import { ActionRegistry } from './actions';
@@ -76,6 +77,35 @@ actions.register('document.save', async () => {
   await invoke('save_file', { path: d.path, content: d.content });
   d.markSaved();
   await view.render();
+});
+
+actions.register('tab.open', async () => {
+  const selected = await openDialog({
+    multiple: false,
+    filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'mdown', 'txt'] }],
+  });
+  if (typeof selected === 'string') await openPath(selected);
+});
+
+actions.register('tab.new', async () => {
+  await actions.dispatch('tab.open');
+});
+
+actions.register('tab.close', async () => {
+  if (tabs.activeIndex >= 0) {
+    const closing = tabs.docs[tabs.activeIndex];
+    tabs.close(tabs.activeIndex);
+    if (tabs.findByPath(closing.path) < 0) await invoke('unwatch_file', { path: closing.path });
+    await view.render();
+  }
+});
+
+actions.register('window.new', async () => {
+  await invoke('open_new_window'); // defined in Task 12
+});
+
+listen<string>('menu-action', (e) => {
+  actions.dispatch(e.payload);
 });
 
 // Dev seed so the UI is visible before open-routing exists (removed after Task 12).
