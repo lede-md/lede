@@ -53,14 +53,13 @@ const view = new EditorView(contentEl, tabs, {
   renderMarkdown,
   pendingReload: (path: string) => pendingReload.has(path),
   onReloadConfirm: async (path: string) => {
-    if (path) {
-      const content = await invoke<string>('read_file', { path });
-      tabs.docs[tabs.findByPath(path)]?.reload(content);
-    }
-    // dismiss for whichever path the active doc is, or the given path
-    const active = tabs.active?.path;
-    if (path) pendingReload.delete(path);
-    else if (active) pendingReload.delete(active);
+    const content = await invoke<string>('read_file', { path });
+    tabs.docs[tabs.findByPath(path)]?.reload(content);
+    pendingReload.delete(path);
+    await view.render();
+  },
+  onReloadDismiss: async (path: string) => {
+    pendingReload.delete(path);
     await view.render();
   },
 });

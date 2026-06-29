@@ -27,5 +27,6 @@ jobs:
       - name: Print cask values
         run: |
           DMG=$(ls src-tauri/target/release/bundle/dmg/*.dmg | head -n1)
+          echo "dmg basename: $(basename "$DMG")"
           echo "sha256: $(shasum -a 256 "$DMG" | cut -d' ' -f1)"
           echo "Update packaging/Casks/mdread.rb version + sha256, push to your tap."

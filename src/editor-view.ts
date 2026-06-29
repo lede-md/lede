@@ -7,6 +7,7 @@ export interface EditorViewOpts {
   renderMarkdown: (md: string) => Promise<string>;
   pendingReload: (path: string) => boolean;
   onReloadConfirm: (path: string) => void;
+  onReloadDismiss: (path: string) => void;
 }
 
 export class EditorView {
@@ -62,7 +63,7 @@ export class EditorView {
       reload.addEventListener('click', () => this.opts.onReloadConfirm(doc.path));
       const keep = document.createElement('button');
       keep.textContent = 'Keep mine';
-      keep.addEventListener('click', () => this.opts.onReloadConfirm('')); // empty = dismiss
+      keep.addEventListener('click', () => this.opts.onReloadDismiss(doc.path));
       banner.append(msg, reload, keep);
       content.appendChild(banner);
     }
