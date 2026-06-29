@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { TabSet } from './tabs';
 import { Document } from './document';
 import { ActionRegistry } from './actions';
@@ -118,6 +119,16 @@ async function openPath(path: string): Promise<void> {
 
 listen<string>('open-file', async (e) => {
   await openPath(e.payload);
+});
+
+getCurrentWebviewWindow().onDragDropEvent(async (event) => {
+  if (event.payload.type === 'drop') {
+    for (const path of event.payload.paths) {
+      if (/\.(md|markdown|mdown|txt)$/i.test(path)) {
+        await openPath(path);
+      }
+    }
+  }
 });
 
 // Tell the backend this window's frontend is ready to receive open-file events.
