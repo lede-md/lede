@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# mdread — open a markdown file in the mdread.app, routing to a running instance.
+set -euo pipefail
+
+APP_BIN="/Applications/mdread.app/Contents/MacOS/mdread"
+
+if [[ ! -x "$APP_BIN" ]]; then
+  echo "mdread.app not found at /Applications/mdread.app — install it first." >&2
+  exit 1
+fi
+
+args=()
+for a in "$@"; do
+  case "$a" in
+    --new-window|-*) args+=("$a") ;;          # pass flags through
+    *) args+=("$(cd "$(dirname "$a")" && pwd)/$(basename "$a")") ;;  # absolutize paths
+  esac
+done
+
+# The single-instance plugin forwards argv to a running app and exits;
+# otherwise this becomes the running instance. Detach so the shell returns.
+"$APP_BIN" "${args[@]}" >/dev/null 2>&1 &
+disown
