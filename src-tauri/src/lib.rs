@@ -17,18 +17,23 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_dialog::init())
         .manage(WatchState::new())
+        .manage(routing::OpenState::new())
         .setup(|app| {
             let handle = app.handle();
             let m = menu::build_menu(handle)?;
             app.set_menu(m)?;
-            // Open files passed on first launch (CLI), after a short delay so the
-            // initial window's frontend is listening.
+            // Queue files passed on first launch (CLI); they will be emitted once
+            // the first window signals frontend-ready via flush_pending.
             let args: Vec<String> = std::env::args().collect();
             let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"));
+            let (paths, nw) = routing::normalize_paths(&args[1..], Path::new(&cwd));
+            routing::route_open(handle, paths, nw);
+
+            // One-shot readiness gate: flush pending paths on the FIRST frontend-ready.
+            // Subsequent frontend-ready emits (new windows) do nothing.
             let handle2 = handle.clone();
             app.listen_any("frontend-ready", move |_| {
-                let (paths, nw) = routing::normalize_paths(&args[1..], Path::new(&cwd));
-                routing::route_open(&handle2, paths, nw);
+                routing::flush_pending(&handle2);
             });
             Ok(())
         })

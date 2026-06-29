@@ -19,11 +19,30 @@ pub fn normalize_paths(args: &[String], cwd: &Path) -> (Vec<String>, bool) {
     (paths, new_window)
 }
 
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
 
-fn new_window_label(app: &AppHandle<impl Runtime>) -> String {
-    let n = app.webview_windows().len();
-    format!("main-{}", n + 1)
+pub struct OpenState {
+    pub ready: AtomicBool,           // true once the first window frontend has signaled readiness
+    pub next_label: AtomicUsize,     // monotonic window-label counter
+    pub pending: Mutex<Vec<String>>, // paths queued before the frontend was ready
+}
+
+impl OpenState {
+    pub fn new() -> Self {
+        Self {
+            ready: AtomicBool::new(false),
+            next_label: AtomicUsize::new(0),
+            pending: Mutex::new(Vec::new()),
+        }
+    }
+}
+
+fn new_window_label<R: Runtime>(app: &AppHandle<R>) -> String {
+    let state = app.state::<OpenState>();
+    let n = state.next_label.fetch_add(1, Ordering::Relaxed);
+    format!("main-{}", n)
 }
 
 pub fn create_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<tauri::WebviewWindow<R>> {
@@ -34,30 +53,70 @@ pub fn create_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<tauri::Web
         .build()
 }
 
-pub fn route_open<R: Runtime>(app: &AppHandle<R>, paths: Vec<String>, new_window: bool) {
+/// Emit `paths` to the best available window (focused > first > new).
+/// Caller guarantees the frontend is ready.
+fn emit_to_window<R: Runtime>(app: &AppHandle<R>, paths: Vec<String>) {
     if paths.is_empty() {
         return;
     }
-    let target = if new_window {
-        create_window(app).ok()
-    } else {
-        // NOTE: app.get_focused_window() does not exist in Tauri 2.11.3.
-        // Using the same pattern as on_menu_event in lib.rs: find focused window,
-        // fall back to first window, fall back to creating a new one.
-        let windows = app.webview_windows();
-        windows
-            .values()
-            .find(|w| w.is_focused().unwrap_or(false))
-            .or_else(|| windows.values().next())
-            .cloned()
-            .or_else(|| create_window(app).ok())
-    };
+    let windows = app.webview_windows();
+    let target = windows
+        .values()
+        .find(|w| w.is_focused().unwrap_or(false))
+        .or_else(|| windows.values().next())
+        .cloned()
+        .or_else(|| create_window(app).ok());
     if let Some(win) = target {
         let _ = win.set_focus();
         for p in paths {
             let _ = win.emit("open-file", p);
         }
     }
+}
+
+pub fn route_open<R: Runtime>(app: &AppHandle<R>, paths: Vec<String>, new_window: bool) {
+    if paths.is_empty() {
+        return;
+    }
+    let state = app.state::<OpenState>();
+    if !state.ready.load(Ordering::Acquire) {
+        // Frontend not ready yet — queue paths for the first frontend-ready flush.
+        if let Ok(mut pending) = state.pending.lock() {
+            pending.extend(paths);
+        }
+        return;
+    }
+    // Frontend is ready — emit immediately.
+    if new_window {
+        if let Some(win) = create_window(app).ok() {
+            let _ = win.set_focus();
+            for p in paths {
+                let _ = win.emit("open-file", p);
+            }
+        }
+    } else {
+        emit_to_window(app, paths);
+    }
+}
+
+/// Called from the `frontend-ready` event handler. Sets ready=true exactly once
+/// (via compare_exchange) and drains any queued pending paths.
+pub fn flush_pending<R: Runtime>(app: &AppHandle<R>) {
+    let state = app.state::<OpenState>();
+    // Only the first caller proceeds; subsequent frontend-ready emits (new windows) are no-ops.
+    if state
+        .ready
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Relaxed)
+        .is_err()
+    {
+        return;
+    }
+    // Drain the pending queue.
+    let paths = {
+        let mut pending = state.pending.lock().unwrap_or_else(|e| e.into_inner());
+        std::mem::take(&mut *pending)
+    };
+    emit_to_window(app, paths);
 }
 
 #[tauri::command]
