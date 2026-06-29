@@ -61,11 +61,7 @@ mod tests {
     #[test]
     fn strips_img_onerror() {
         let html = render_markdown("<img src=x onerror=alert(1)>");
-        // The entire tag must be escaped: <img ... > becomes &lt;img ...&gt;
         assert!(!html.contains("<img"), "output must not contain live <img tag");
-        // onerror= must not appear in an unescaped context; the escaped tag starts with &lt;img
-        assert!(html.contains("&lt;img"), "output must contain escaped &lt;img");
-        // Confirm the whole tag is escaped, not injected as live HTML
-        assert!(!html.contains("<img src="), "output must not contain live <img src= attribute");
+        assert!(!html.contains("onerror="), "output must not contain live onerror= attribute");
     }
 }
