@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Rounded black box (macOS-style rounded square) -->
+  <rect x="0" y="0" width="1024" height="1024" rx="228" ry="228" fill="#0B0B0C"/>
+  <!-- Subtle top highlight for depth -->
+  <rect x="0" y="0" width="1024" height="1024" rx="228" ry="228" fill="url(#sheen)"/>
+  <defs>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.06"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- Markdown mark (CommonMark logo), white, centered.
+       Native logo viewBox 0 0 208 128; scaled by 3.0 -> 624x384; centered in 1024. -->
+  <g transform="translate(200,320) scale(3.0)">
+    <rect x="5" y="5" width="198" height="118" rx="14" ry="14" fill="none" stroke="#ffffff" stroke-width="12"/>
+    <path d="M30 98 V30 h20 l20 25 20-25 h20 v68 H90 V59 L70 84 50 59 v39 z M155 98 l-30-33 h20 V30 h20 v35 h20 z" fill="#ffffff"/>
+  </g>
+</svg>
