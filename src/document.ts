@@ -3,13 +3,14 @@ export type ViewMode = 'source' | 'preview';
 export class Document {
   readonly path: string;
   content: string;
-  view: ViewMode = 'source';
+  view: ViewMode;
   private savedContent: string;
 
-  constructor(path: string, content: string) {
+  constructor(path: string, content: string, view: ViewMode = 'preview') {
     this.path = path;
     this.content = content;
     this.savedContent = content;
+    this.view = view;
   }
 
   get dirty(): boolean {

@@ -2,11 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { Document } from './document';
 
 describe('Document', () => {
-  it('starts clean and in source view', () => {
+  it('starts clean and in preview view by default', () => {
     const d = new Document('/a.md', '# hi');
     expect(d.dirty).toBe(false);
-    expect(d.view).toBe('source');
+    expect(d.view).toBe('preview');
     expect(d.content).toBe('# hi');
+  });
+
+  it('accepts an explicit source view override', () => {
+    const d = new Document('/a.md', '# hi', 'source');
+    expect(d.view).toBe('source');
   });
 
   it('becomes dirty when content changes from saved', () => {

@@ -49,7 +49,23 @@ export class EditorView {
     if (!doc) {
       const empty = document.createElement('div');
       empty.id = 'empty';
-      empty.textContent = 'No file open. Use Cmd+O to open a markdown file.';
+      empty.innerHTML = `
+        <div class="empty-inner">
+          <svg class="empty-mark" width="64" height="40" viewBox="0 0 64 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="1.5" y="1.5" width="61" height="37" rx="6.5" stroke="currentColor" stroke-width="3"/>
+            <path d="M12 28V12l8 9 8-9v16" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M36 28V12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            <path d="M36 28l8-8 8 8" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <p class="empty-title">No file open</p>
+          <p class="empty-subtitle">Open a markdown file to start reading.</p>
+          <div class="empty-hints">
+            <span class="empty-hint"><kbd>⌘O</kbd> Open</span>
+            <span class="empty-hint"><kbd>⌘T</kbd> New tab</span>
+            <span class="empty-hint-plain">or drag a file here</span>
+          </div>
+        </div>
+      `;
       content.appendChild(empty);
       return;
     }
