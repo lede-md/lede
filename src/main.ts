@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
-import { open as openDialog, ask, message } from '@tauri-apps/plugin-dialog';
+import { open as openDialog, save as saveDialog, ask, message } from '@tauri-apps/plugin-dialog';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
@@ -12,6 +12,7 @@ import { EditorView } from './editor-view';
 const tabs = new TabSet();
 const actions = new ActionRegistry();
 const contentEl = document.getElementById('content')!;
+let untitledSeq = 0;
 
 let pendingReload: Set<string> = new Set();
 
@@ -45,7 +46,7 @@ const view = new EditorView(contentEl, tabs, {
   onClose: async (i) => {
     const closing = tabs.docs[i];
     tabs.close(i);
-    if (closing && tabs.findByPath(closing.path) < 0) {
+    if (closing && !closing.isUntitled && tabs.findByPath(closing.path) < 0) {
       await invoke('unwatch_file', { path: closing.path });
     }
     await view.render();
@@ -75,10 +76,22 @@ actions.register('view.togglePreview', () => {
 
 actions.register('document.save', async () => {
   const d = tabs.active;
-  if (!d || !d.dirty) return;
-  await invoke('save_file', { path: d.path, content: d.content });
-  d.markSaved();
-  await view.render();
+  if (!d) return;
+  if (d.isUntitled) {
+    const target = await saveDialog({ filters: [{ name: 'Markdown', extensions: ['md', 'markdown'] }] });
+    if (typeof target === 'string') {
+      await invoke('save_file', { path: target, content: d.content });
+      d.assignPath(target);
+      d.markSaved();
+      await invoke('watch_file', { path: target });
+      await view.render();
+    }
+  } else {
+    if (!d.dirty) return;
+    await invoke('save_file', { path: d.path, content: d.content });
+    d.markSaved();
+    await view.render();
+  }
 });
 
 actions.register('tab.open', async () => {
@@ -90,14 +103,18 @@ actions.register('tab.open', async () => {
 });
 
 actions.register('tab.new', async () => {
-  await actions.dispatch('tab.open');
+  const doc = Document.untitled(++untitledSeq);
+  tabs.open(doc);
+  await view.render();
 });
 
 actions.register('tab.close', async () => {
   if (tabs.activeIndex >= 0) {
     const closing = tabs.docs[tabs.activeIndex];
     tabs.close(tabs.activeIndex);
-    if (tabs.findByPath(closing.path) < 0) await invoke('unwatch_file', { path: closing.path });
+    if (!closing.isUntitled && tabs.findByPath(closing.path) < 0) {
+      await invoke('unwatch_file', { path: closing.path });
+    }
     await view.render();
   }
 });

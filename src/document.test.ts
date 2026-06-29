@@ -42,3 +42,33 @@ describe('Document', () => {
     expect(d.dirty).toBe(false);
   });
 });
+
+describe('Document.untitled', () => {
+  it('creates an untitled doc with synthetic path, source view, empty content, not dirty', () => {
+    const d = Document.untitled(1);
+    expect(d.isUntitled).toBe(true);
+    expect(d.view).toBe('source');
+    expect(d.content).toBe('');
+    expect(d.path).toBe('untitled-1');
+    expect(d.dirty).toBe(false);
+  });
+
+  it('becomes dirty when content is set', () => {
+    const d = Document.untitled(1);
+    d.setContent('x');
+    expect(d.dirty).toBe(true);
+  });
+
+  it('assignPath updates path and clears isUntitled', () => {
+    const d = Document.untitled(1);
+    d.assignPath('/a/b.md');
+    expect(d.path).toBe('/a/b.md');
+    expect(d.isUntitled).toBe(false);
+  });
+
+  it('normal Document constructor defaults isUntitled to false and view to preview', () => {
+    const d = new Document('/a.md', '# hi');
+    expect(d.isUntitled).toBe(false);
+    expect(d.view).toBe('preview');
+  });
+});
