@@ -1,5 +1,7 @@
+use crate::watcher::WatchState;
 use std::fs;
 use std::path::Path;
+use tauri::State;
 
 pub fn read_to_string(path: &str) -> Result<String, String> {
     fs::read_to_string(Path::new(path)).map_err(|e| e.to_string())
@@ -15,7 +17,8 @@ pub fn read_file(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn save_file(path: String, content: String) -> Result<(), String> {
+pub fn save_file(path: String, content: String, state: State<WatchState>) -> Result<(), String> {
+    state.suppressor.suppress(&path);
     write_string(&path, &content)
 }
 
