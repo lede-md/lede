@@ -14,6 +14,11 @@ auto-reload when an agent changes the file on disk.
 
 Or via Homebrew: `brew install --cask OWNER/tap/mdread`.
 
+## Claude Code
+
+Copy `claude/commands/mdread.md` to `~/.claude/commands/` (global) or your
+project's `.claude/commands/`. Then `/mdread path/to/file.md` opens it in the app.
+
 ## Use
 
 - `mdread notes.md` — open a file (new tab in the focused window).
