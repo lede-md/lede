@@ -29,6 +29,8 @@ pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             &PredefinedMenuItem::separator(app)?,
             &item("document.save", "Save", Some("CmdOrCtrl+S"))?,
             &PredefinedMenuItem::separator(app)?,
+            &item("document.exportHtml", "Export HTML…", Some("CmdOrCtrl+Shift+E"))?,
+            &PredefinedMenuItem::separator(app)?,
             &item("tab.close", "Close Tab", Some("CmdOrCtrl+W"))?,
         ],
     )?;

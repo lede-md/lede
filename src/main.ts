@@ -10,6 +10,7 @@ import { ActionRegistry } from './actions';
 import { EditorView } from './editor-view';
 import { getPref, setPref, addRecentFile } from './prefs';
 import { applyTheme } from './theme';
+import { buildStandaloneHtml } from './export';
 
 function applyFontSize(px: number): void {
   const clamped = Math.min(28, Math.max(10, px));
@@ -80,6 +81,22 @@ const view = new EditorView(contentEl, tabs, {
 });
 
 // Actions wired across later tasks.
+actions.register('document.exportHtml', async () => {
+  const d = tabs.active;
+  if (!d) return;
+  const body = await invoke<string>('render_markdown_cmd', { markdown: d.content });
+  const name = d.isUntitled ? 'Untitled' : (d.path.split('/').pop() || 'document');
+  const title = name.replace(/\.(md|markdown|mdown|txt)$/i, '');
+  const html = buildStandaloneHtml(title, body);
+  const target = await saveDialog({
+    defaultPath: title + '.html',
+    filters: [{ name: 'HTML', extensions: ['html'] }],
+  });
+  if (typeof target === 'string') {
+    await invoke('save_file', { path: target, content: html });
+  }
+});
+
 actions.register('view.togglePreview', () => {
   const d = tabs.active;
   if (d) {
