@@ -37,7 +37,9 @@ export class EditorView {
     this.tabs.docs.forEach((doc, i) => {
       const el = document.createElement('div');
       el.className = 'tab' + (i === this.tabs.activeIndex ? ' active' : '') + (doc.dirty ? ' dirty' : '');
-      const name = doc.isUntitled ? 'Untitled' : (doc.path.split('/').pop() || doc.path);
+      const name = doc.isUntitled
+        ? `Untitled ${doc.path.replace('untitled-', '')}`
+        : (doc.path.split('/').pop() || doc.path);
       el.innerHTML = `<span class="dot"></span><span class="name"></span><span class="close">×</span>`;
       el.querySelector('.name')!.textContent = name;
       el.addEventListener('click', (e) => {
