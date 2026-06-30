@@ -59,7 +59,7 @@ pub fn run() {
             routing::open_new_window
         ])
         .build(tauri::generate_context!())
-        .expect("error while building mdread")
+        .expect("error while building lede")
         .run(|app, event| {
             if let tauri::RunEvent::Opened { urls } = event {
                 let paths: Vec<String> = urls

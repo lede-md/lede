@@ -8,7 +8,7 @@ pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
 
     let app_menu = Submenu::with_items(
         app,
-        "mdread",
+        "Lede",
         true,
         &[
             &MenuItem::with_id(app, "app.checkForUpdates", "Check for Updates…", true, None::<&str>)?,

@@ -4,7 +4,7 @@ Generate a keypair once (keep the private key secret — store as CI secret
 `TAURI_SIGNING_PRIVATE_KEY` and optional `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`):
 
 ```bash
-npm run tauri signer generate -- -w ~/.mdread/updater.key
+npm run tauri signer generate -- -w ~/.lede/updater.key
 ```
 
 Copy the printed public key into `tauri.conf.json` → `plugins.updater.pubkey`.
@@ -23,14 +23,11 @@ The release build (CI) signs the bundle; `tauri build` then emits
 
 ## GitHub release endpoint
 
-Update the `OWNER` placeholder in `tauri.conf.json` → `plugins.updater.endpoints`:
+The endpoint in `tauri.conf.json` → `plugins.updater.endpoints` points at:
 
 ```json
-"https://github.com/OWNER/mdread/releases/latest/download/latest.json"
+"https://github.com/lede-md/lede/releases/latest/download/latest.json"
 ```
-
-Replace `OWNER` with the actual GitHub username or organisation that owns the
-`mdread` repository.
 
 ## Release process (manual / Task 17)
 

@@ -48,7 +48,7 @@ fn new_window_label<R: Runtime>(app: &AppHandle<R>) -> String {
 pub fn create_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<tauri::WebviewWindow<R>> {
     let label = new_window_label(app);
     WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
-        .title("mdread")
+        .title("Lede")
         .inner_size(900.0, 700.0)
         .build()
 }

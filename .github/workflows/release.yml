@@ -21,7 +21,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: "mdread ${{ github.ref_name }}"
+          releaseName: "Lede ${{ github.ref_name }}"
           releaseDraft: false
           includeUpdaterJson: true
       - name: Print cask values
@@ -29,4 +29,4 @@ jobs:
           DMG=$(ls src-tauri/target/release/bundle/dmg/*.dmg | head -n1)
           echo "dmg basename: $(basename "$DMG")"
           echo "sha256: $(shasum -a 256 "$DMG" | cut -d' ' -f1)"
-          echo "Update packaging/Casks/mdread.rb version + sha256, push to your tap."
+          echo "Update packaging/Casks/lede.rb version + sha256, push to your tap."

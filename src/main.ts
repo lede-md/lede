@@ -130,7 +130,7 @@ actions.register('app.checkForUpdates', async () => {
   try {
     const update = await check();
     if (!update) {
-      await message('You are on the latest version.', { title: 'mdread' });
+      await message('You are on the latest version.', { title: 'Lede' });
       return;
     }
     const yes = await ask(
@@ -142,7 +142,7 @@ actions.register('app.checkForUpdates', async () => {
       await relaunch();
     }
   } catch (err) {
-    await message(`Update check failed: ${err}`, { title: 'mdread' });
+    await message(`Update check failed: ${err}`, { title: 'Lede' });
   }
 });
 
