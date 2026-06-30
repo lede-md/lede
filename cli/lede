@@ -2,7 +2,7 @@
 # lede — open a markdown file in the Lede.app, routing to a running instance.
 set -euo pipefail
 
-APP_BIN="/Applications/Lede.app/Contents/MacOS/Lede"
+APP_BIN="/Applications/Lede.app/Contents/MacOS/lede"
 
 if [[ ! -x "$APP_BIN" ]]; then
   echo "Lede.app not found at /Applications/Lede.app — install it first." >&2
