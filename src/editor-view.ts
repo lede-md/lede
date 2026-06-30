@@ -1,5 +1,6 @@
 import { TabSet } from './tabs';
 import { countText } from './wordcount';
+import { findMatches } from './find';
 
 export interface EditorViewOpts {
   onContentInput: (text: string) => void;
@@ -15,6 +16,11 @@ export interface EditorViewOpts {
 }
 
 export class EditorView {
+  private findBound = false;
+  private matches: number[] = [];
+  private matchIdx = 0;
+  private lastQuery = '';
+
   constructor(
     private root: HTMLElement,
     private tabs: TabSet,
@@ -22,6 +28,12 @@ export class EditorView {
   ) {}
 
   async render(): Promise<void> {
+    // Hide find bar on render: textarea is recreated and match offsets are stale.
+    const bar = document.getElementById('findbar') as HTMLElement | null;
+    if (bar) bar.hidden = true;
+    this.matches = [];
+    this.matchIdx = 0;
+    this.lastQuery = '';
     this.renderTabBar();
     await this.renderContent();
     this.syncFooter();
@@ -68,6 +80,93 @@ export class EditorView {
       });
       bar.appendChild(el);
     });
+  }
+
+  closeFind(): void {
+    const bar = document.getElementById('findbar') as HTMLElement | null;
+    if (bar) bar.hidden = true;
+    this.matches = [];
+    this.matchIdx = 0;
+    this.lastQuery = '';
+    const ta = document.getElementById('source') as HTMLTextAreaElement | null;
+    if (ta) ta.focus();
+  }
+
+  private selectCurrent(): void {
+    const count = document.getElementById('find-count')!;
+    const ta = document.getElementById('source') as HTMLTextAreaElement | null;
+    if (this.matches.length === 0 || !ta) {
+      count.textContent = this.lastQuery ? 'No results' : '';
+      return;
+    }
+    const start = this.matches[this.matchIdx];
+    const end = start + this.lastQuery.length;
+    ta.focus();
+    ta.setSelectionRange(start, end);
+    // Scroll match into view
+    const text = ta.value;
+    const lineIndex = text.slice(0, start).split('\n').length - 1;
+    const cs = getComputedStyle(ta);
+    const lhRaw = cs.lineHeight;
+    const fontSize = parseFloat(cs.fontSize) || 14;
+    const lineHeight = lhRaw === 'normal' ? fontSize * 1.5 : parseFloat(lhRaw);
+    ta.scrollTop = Math.max(0, lineIndex * lineHeight - ta.clientHeight / 2);
+    count.textContent = `${this.matchIdx + 1} / ${this.matches.length}`;
+    // Return focus to find input so user can keep typing/using Enter
+    const input = document.getElementById('find-input') as HTMLInputElement | null;
+    if (input) input.focus();
+  }
+
+  gotoMatch(delta: number): void {
+    if (this.matches.length === 0) return;
+    this.matchIdx = (this.matchIdx + delta + this.matches.length) % this.matches.length;
+    this.selectCurrent();
+  }
+
+  runFind(query: string): void {
+    this.lastQuery = query;
+    const ta = document.getElementById('source') as HTMLTextAreaElement | null;
+    if (!ta) {
+      this.matches = [];
+      const count = document.getElementById('find-count');
+      if (count) count.textContent = query ? 'No results' : '';
+      return;
+    }
+    this.matches = findMatches(ta.value, query);
+    this.matchIdx = 0;
+    this.selectCurrent();
+  }
+
+  async openFind(): Promise<void> {
+    const doc = this.tabs.active;
+    if (doc && doc.view === 'preview') {
+      doc.view = 'source';
+      await this.render();
+    }
+    const bar = document.getElementById('findbar') as HTMLElement;
+    bar.hidden = false;
+    const input = document.getElementById('find-input') as HTMLInputElement;
+    input.focus();
+    input.select();
+
+    if (!this.findBound) {
+      this.findBound = true;
+      input.addEventListener('input', () => this.runFind(input.value));
+      input.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (e.shiftKey) this.gotoMatch(-1);
+          else this.gotoMatch(1);
+        } else if (e.key === 'Escape') {
+          this.closeFind();
+        }
+      });
+      document.getElementById('find-prev')!.addEventListener('click', () => this.gotoMatch(-1));
+      document.getElementById('find-next')!.addEventListener('click', () => this.gotoMatch(1));
+      document.getElementById('find-close')!.addEventListener('click', () => this.closeFind());
+    }
+
+    this.runFind(input.value);
   }
 
   private async renderContent(): Promise<void> {
