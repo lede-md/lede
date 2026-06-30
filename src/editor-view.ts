@@ -1,4 +1,5 @@
 import { TabSet } from './tabs';
+import { countText } from './wordcount';
 
 export interface EditorViewOpts {
   onContentInput: (text: string) => void;
@@ -8,6 +9,7 @@ export interface EditorViewOpts {
   pendingReload: (path: string) => boolean;
   onReloadConfirm: (path: string) => void;
   onReloadDismiss: (path: string) => void;
+  footerVisible: () => boolean;
 }
 
 export class EditorView {
@@ -20,6 +22,19 @@ export class EditorView {
   async render(): Promise<void> {
     this.renderTabBar();
     await this.renderContent();
+    this.syncFooter();
+  }
+
+  syncFooter(): void {
+    const footer = document.getElementById('footer')!;
+    const doc = this.tabs.active;
+    if (this.opts.footerVisible() && doc) {
+      const { words, chars } = countText(doc.content);
+      footer.textContent = `${words} words · ${chars} chars`;
+      footer.hidden = false;
+    } else {
+      footer.hidden = true;
+    }
   }
 
   /**

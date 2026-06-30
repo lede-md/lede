@@ -11,6 +11,11 @@ import { EditorView } from './editor-view';
 import { getPref, setPref } from './prefs';
 import { applyTheme } from './theme';
 
+function applyFontSize(px: number): void {
+  const clamped = Math.min(28, Math.max(10, px));
+  document.documentElement.style.setProperty('--font-size', clamped + 'px');
+}
+
 const tabs = new TabSet();
 const actions = new ActionRegistry();
 const contentEl = document.getElementById('content')!;
@@ -43,6 +48,7 @@ const view = new EditorView(contentEl, tabs, {
     // rebuilding the <textarea> on every keystroke resets the caret to the end
     // and wipes the native undo history (breaking Cmd+Z).
     view.syncTabBar();
+    view.syncFooter();
   },
   onActivate: (i) => {
     tabs.activate(i);
@@ -57,6 +63,7 @@ const view = new EditorView(contentEl, tabs, {
     await view.render();
   },
   renderMarkdown,
+  footerVisible: () => getPref('footerVisible'),
   pendingReload: (path: string) => pendingReload.has(path),
   onReloadConfirm: async (path: string) => {
     const content = await invoke<string>('read_file', { path });
@@ -177,10 +184,35 @@ getCurrentWebviewWindow().onDragDropEvent(async (event) => {
 // Apply persisted theme on launch.
 applyTheme(getPref('theme'));
 
+// Apply persisted font size on launch.
+applyFontSize(getPref('fontSize'));
+
 // Register theme actions.
 for (const t of ['system', 'light', 'dark'] as const) {
   actions.register('theme.' + t, () => { setPref('theme', t); applyTheme(t); });
 }
+
+// Register zoom actions.
+actions.register('view.zoomIn', () => {
+  const n = Math.min(28, getPref('fontSize') + 1);
+  setPref('fontSize', n);
+  applyFontSize(n);
+});
+actions.register('view.zoomOut', () => {
+  const n = Math.max(10, getPref('fontSize') - 1);
+  setPref('fontSize', n);
+  applyFontSize(n);
+});
+actions.register('view.zoomReset', () => {
+  setPref('fontSize', 14);
+  applyFontSize(14);
+});
+
+// Register word-count toggle.
+actions.register('view.toggleWordCount', () => {
+  setPref('footerVisible', !getPref('footerVisible'));
+  view.syncFooter();
+});
 
 // Tell the backend this window's frontend is ready to receive open-file events.
 emit('frontend-ready');
