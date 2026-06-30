@@ -8,6 +8,8 @@ import { TabSet } from './tabs';
 import { Document } from './document';
 import { ActionRegistry } from './actions';
 import { EditorView } from './editor-view';
+import { getPref, setPref } from './prefs';
+import { applyTheme } from './theme';
 
 const tabs = new TabSet();
 const actions = new ActionRegistry();
@@ -171,6 +173,14 @@ getCurrentWebviewWindow().onDragDropEvent(async (event) => {
     }
   }
 });
+
+// Apply persisted theme on launch.
+applyTheme(getPref('theme'));
+
+// Register theme actions.
+for (const t of ['system', 'light', 'dark'] as const) {
+  actions.register('theme.' + t, () => { setPref('theme', t); applyTheme(t); });
+}
 
 // Tell the backend this window's frontend is ready to receive open-file events.
 emit('frontend-ready');
