@@ -23,7 +23,7 @@ pub fn run() {
         .manage(routing::OpenState::new())
         .setup(|app| {
             let handle = app.handle();
-            let m = menu::build_menu(handle)?;
+            let m = menu::build_menu(handle, &[])?;
             app.set_menu(m)?;
             // Queue files passed on first launch (CLI); they will be emitted once
             // the first window signals frontend-ready via flush_pending.
@@ -57,7 +57,8 @@ pub fn run() {
             fs_ops::save_file,
             watcher::watch_file,
             watcher::unwatch_file,
-            routing::open_new_window
+            routing::open_new_window,
+            menu::set_recent_files
         ])
         .build(tauri::generate_context!())
         .expect("error while building lede")

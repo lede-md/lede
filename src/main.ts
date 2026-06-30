@@ -174,12 +174,20 @@ actions.register('app.checkForUpdates', async () => {
 });
 
 listen<string>('menu-action', (e) => {
-  actions.dispatch(e.payload);
+  const id = e.payload;
+  if (id.startsWith('recent:')) {
+    const i = parseInt(id.slice('recent:'.length), 10);
+    const p = getPref('recentFiles')[i];
+    if (p) openPath(p).catch(() => {});
+    return;
+  }
+  actions.dispatch(id);
 });
 
 async function openPath(path: string): Promise<void> {
   const content = await invoke<string>('read_file', { path });
   addRecentFile(path);
+  invoke('set_recent_files', { paths: getPref('recentFiles') });
   const wasOpen = tabs.findByPath(path) >= 0;
   tabs.open(new Document(path, content));
   if (!wasOpen) await invoke('watch_file', { path });
@@ -235,6 +243,14 @@ actions.register('view.toggleWordCount', () => {
 
 actions.register('view.find', () => view.openFind());
 
+// Register recent.clear action.
+actions.register('recent.clear', () => {
+  setPref('recentFiles', []);
+  invoke('set_recent_files', { paths: [] });
+  view.render();
+});
+
 // Tell the backend this window's frontend is ready to receive open-file events.
 emit('frontend-ready');
+invoke('set_recent_files', { paths: getPref('recentFiles') });
 view.render();
