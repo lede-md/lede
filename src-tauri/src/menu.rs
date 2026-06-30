@@ -1,6 +1,7 @@
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Runtime};
 
+
 pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let item = |id: &str, label: &str, accel: Option<&str>| {
         MenuItem::with_id(app, id, label, true, accel)
@@ -47,11 +48,32 @@ pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         ],
     )?;
 
+    let theme_submenu = Submenu::with_items(
+        app,
+        "Theme",
+        true,
+        &[
+            &item("theme.system", "System", None::<&str>)?,
+            &item("theme.light", "Light", None::<&str>)?,
+            &item("theme.dark", "Dark", None::<&str>)?,
+        ],
+    )?;
+
     let view_menu = Submenu::with_items(
         app,
         "View",
         true,
-        &[&item("view.togglePreview", "Toggle Preview", Some("CmdOrCtrl+E"))?],
+        &[
+            &item("view.togglePreview", "Toggle Preview", Some("CmdOrCtrl+E"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &theme_submenu,
+            &PredefinedMenuItem::separator(app)?,
+            &item("view.zoomIn", "Zoom In", Some("CmdOrCtrl+="))?,
+            &item("view.zoomOut", "Zoom Out", Some("CmdOrCtrl+-"))?,
+            &item("view.zoomReset", "Actual Size", Some("CmdOrCtrl+0"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &item("view.toggleWordCount", "Show Word Count", None::<&str>)?,
+        ],
     )?;
 
     Menu::with_items(app, &[&app_menu, &file_menu, &edit_menu, &view_menu])
