@@ -233,6 +233,8 @@ actions.register('view.toggleWordCount', () => {
   view.syncFooter();
 });
 
+actions.register('view.find', () => view.openFind());
+
 // Tell the backend this window's frontend is ready to receive open-file events.
 emit('frontend-ready');
 view.render();
