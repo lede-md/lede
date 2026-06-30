@@ -178,11 +178,14 @@ export class EditorView {
       empty.id = 'empty';
       empty.innerHTML = `
         <div class="empty-inner">
-          <svg class="empty-mark" width="64" height="40" viewBox="0 0 64 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect x="1.5" y="1.5" width="61" height="37" rx="6.5" stroke="currentColor" stroke-width="3"/>
-            <path d="M12 28V12l8 9 8-9v16" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M36 28V12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-            <path d="M36 28l8-8 8 8" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg class="empty-mark" width="84" height="84" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs><linearGradient id="emptyMarkGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8f9dff"/><stop offset="1" stop-color="#5a32d8"/></linearGradient></defs>
+            <rect width="240" height="240" rx="54" fill="url(#emptyMarkGrad)"/>
+            <g transform="translate(51,42) scale(6.25)" fill="none" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/>
+              <line x1="16" y1="8" x2="2" y2="22"/>
+              <line x1="17.5" y1="15" x2="9" y2="15"/>
+            </g>
           </svg>
           <p class="empty-title">No file open</p>
           <p class="empty-subtitle">Open a markdown file to start reading.</p>
