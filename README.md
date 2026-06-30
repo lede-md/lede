@@ -1,5 +1,7 @@
 # Lede
 
+<img src="assets/brand/lede-lockup-dark.svg" alt="Lede" width="280">
+
 A minimal, fast macOS markdown editor: open a `.md` file, read it rendered,
 edit the source, toggle between them. Multiple windows, multiple tabs,
 auto-reload when an agent changes the file on disk.

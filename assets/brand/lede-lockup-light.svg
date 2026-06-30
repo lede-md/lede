@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="170" viewBox="0 0 560 170">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8f9dff"/><stop offset="1" stop-color="#5a32d8"/></linearGradient></defs>
+  <g transform="translate(20,25)">
+    <rect width="120" height="120" rx="27" fill="url(#g)"/>
+    <g transform="translate(25.5,21) scale(3.125)" fill="none" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/>
+      <line x1="16" y1="8" x2="2" y2="22"/>
+      <line x1="17.5" y1="15" x2="9" y2="15"/>
+    </g>
+  </g>
+  <text x="168" y="108" font-family="'Iowan Old Style','Charter',Palatino,Georgia,serif" font-weight="600" font-size="92" letter-spacing="-3" fill="#11151d">lede</text>
+</svg>
