@@ -8,7 +8,7 @@ import { TabSet } from './tabs';
 import { Document } from './document';
 import { ActionRegistry } from './actions';
 import { EditorView } from './editor-view';
-import { getPref, setPref } from './prefs';
+import { getPref, setPref, addRecentFile } from './prefs';
 import { applyTheme } from './theme';
 
 function applyFontSize(px: number): void {
@@ -64,6 +64,8 @@ const view = new EditorView(contentEl, tabs, {
   },
   renderMarkdown,
   footerVisible: () => getPref('footerVisible'),
+  recentFiles: () => getPref('recentFiles'),
+  onOpenRecent: (p) => openPath(p).catch(() => {}),
   pendingReload: (path: string) => pendingReload.has(path),
   onReloadConfirm: async (path: string) => {
     const content = await invoke<string>('read_file', { path });
@@ -88,7 +90,7 @@ actions.register('view.togglePreview', () => {
 
 actions.register('document.save', async () => {
   const d = tabs.active;
-  if (!d) return;
+  if (!d || !d.dirty) return;
   if (d.isUntitled) {
     const target = await saveDialog({ filters: [{ name: 'Markdown', extensions: ['md', 'markdown'] }] });
     if (typeof target === 'string') {
@@ -99,7 +101,6 @@ actions.register('document.save', async () => {
       await view.render();
     }
   } else {
-    if (!d.dirty) return;
     await invoke('save_file', { path: d.path, content: d.content });
     d.markSaved();
     await view.render();
@@ -161,6 +162,7 @@ listen<string>('menu-action', (e) => {
 
 async function openPath(path: string): Promise<void> {
   const content = await invoke<string>('read_file', { path });
+  addRecentFile(path);
   const wasOpen = tabs.findByPath(path) >= 0;
   tabs.open(new Document(path, content));
   if (!wasOpen) await invoke('watch_file', { path });

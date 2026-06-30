@@ -10,6 +10,8 @@ export interface EditorViewOpts {
   onReloadConfirm: (path: string) => void;
   onReloadDismiss: (path: string) => void;
   footerVisible: () => boolean;
+  recentFiles: () => string[];
+  onOpenRecent: (path: string) => void;
 }
 
 export class EditorView {
@@ -92,6 +94,45 @@ export class EditorView {
           </div>
         </div>
       `;
+      // Append recent files section if any
+      const recents = this.opts.recentFiles().slice(0, 8);
+      if (recents.length > 0) {
+        const inner = empty.querySelector('.empty-inner')!;
+        const label = document.createElement('p');
+        label.className = 'empty-recent-label';
+        label.textContent = 'Recent';
+        inner.appendChild(label);
+
+        const list = document.createElement('div');
+        list.className = 'empty-recent-list';
+        for (const fullPath of recents) {
+          const parts = fullPath.replace(/\\/g, '/').split('/');
+          const basename = parts[parts.length - 1] || fullPath;
+          const dir = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+
+          const btn = document.createElement('button');
+          btn.className = 'empty-recent-item';
+          btn.title = fullPath;
+
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'empty-recent-name';
+          nameSpan.textContent = basename;
+
+          btn.appendChild(nameSpan);
+
+          if (dir) {
+            const dirSpan = document.createElement('span');
+            dirSpan.className = 'empty-recent-dir';
+            dirSpan.textContent = dir;
+            btn.appendChild(dirSpan);
+          }
+
+          btn.addEventListener('click', () => this.opts.onOpenRecent(fullPath));
+          list.appendChild(btn);
+        }
+        inner.appendChild(list);
+      }
+
       content.appendChild(empty);
       return;
     }

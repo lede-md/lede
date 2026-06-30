@@ -52,5 +52,11 @@ textarea#source { width: 100%; height: 100%; border: 0; outline: none; resize: n
 .empty-hint { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--muted); }
 .empty-hint kbd { display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-size: 11px; font-weight: 600; padding: 2px 6px; border: 1px solid var(--border); border-radius: 5px; background: var(--tab-bg); color: var(--fg); line-height: 1.5; }
 .empty-hint-plain { font-size: 13px; color: var(--muted); }
+.empty-recent-label { margin: 16px 0 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.empty-recent-list { display: flex; flex-direction: column; gap: 2px; width: 100%; max-width: 340px; }
+.empty-recent-item { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 6px 10px; border: none; border-radius: 6px; background: transparent; color: var(--fg); cursor: pointer; text-align: left; max-width: 100%; overflow: hidden; }
+.empty-recent-item:hover { background: var(--tab-bg); }
+.empty-recent-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.empty-recent-dir { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 #footer { font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding: 4px 12px; text-align: right; font-variant-numeric: tabular-nums; background: var(--bg); display: block; }
 #footer[hidden] { display: none; }
