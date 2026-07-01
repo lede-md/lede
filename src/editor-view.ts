@@ -2,6 +2,61 @@ import { TabSet } from './tabs';
 import { countText } from './wordcount';
 import { findMatches } from './find';
 
+// CodeMirror 6 imports
+import { EditorView as CMView, keymap } from '@codemirror/view';
+import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
+import { markdown } from '@codemirror/lang-markdown';
+import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
+
+// ---------------------------------------------------------------------------
+// Theme: maps our CSS variables into CodeMirror's styling system.
+// Using CSS vars means this single theme works for both light and dark modes.
+// ---------------------------------------------------------------------------
+const ledeTheme = CMView.theme(
+  {
+    '&': {
+      backgroundColor: 'var(--bg)',
+      color: 'var(--fg)',
+      height: '100%',
+    },
+    '.cm-content': {
+      fontFamily: 'var(--font-mono)',
+      caretColor: 'var(--accent)',
+      padding: '16px',
+    },
+    '.cm-cursor': {
+      borderLeftColor: 'var(--accent)',
+    },
+    '.cm-scroller': {
+      overflow: 'auto',
+    },
+    '&.cm-focused': {
+      outline: 'none',
+    },
+    '.cm-selectionBackground, ::selection': {
+      backgroundColor: 'color-mix(in srgb, var(--accent) 30%, transparent)',
+    },
+    '.cm-gutters': {
+      display: 'none',
+    },
+  },
+  { dark: false },
+);
+
+// ---------------------------------------------------------------------------
+// Highlight style: tasteful markdown token styling via CSS vars.
+// ---------------------------------------------------------------------------
+const ledeHighlight = HighlightStyle.define([
+  { tag: tags.heading, fontWeight: 'bold' },
+  { tag: tags.emphasis, fontStyle: 'italic' },
+  { tag: tags.strong, fontWeight: 'bold' },
+  { tag: tags.link, color: 'var(--accent)' },
+  { tag: tags.monospace, fontFamily: 'var(--font-mono)' },
+  { tag: tags.quote, color: 'var(--muted)' },
+  { tag: [tags.list, tags.meta], color: 'var(--muted)' },
+]);
+
 export interface EditorViewOpts {
   onContentInput: (text: string) => void;
   onActivate: (i: number) => void;
@@ -20,6 +75,7 @@ export class EditorView {
   private matches: number[] = [];
   private matchIdx = 0;
   private lastQuery = '';
+  private cmView?: CMView;
 
   constructor(
     private root: HTMLElement,
@@ -28,7 +84,12 @@ export class EditorView {
   ) {}
 
   async render(): Promise<void> {
-    // Hide find bar on render: textarea is recreated and match offsets are stale.
+    // Destroy any prior CodeMirror instance before rebuilding content.
+    if (this.cmView) {
+      this.cmView.destroy();
+      this.cmView = undefined;
+    }
+    // Hide find bar on render: CM instance is recreated and match offsets are stale.
     const bar = document.getElementById('findbar') as HTMLElement | null;
     if (bar) bar.hidden = true;
     this.matches = [];
@@ -53,8 +114,8 @@ export class EditorView {
 
   /**
    * Refresh only the tab bar (e.g. the unsaved-changes dot) WITHOUT rebuilding
-   * the content area. Used on every keystroke: rebuilding the <textarea> on
-   * input would destroy the caret position and jump the cursor to the end.
+   * the content area. Used on every keystroke: rebuilding the CM view on
+   * input would destroy the caret position and wipe native undo history.
    */
   syncTabBar(): void {
     this.renderTabBar();
@@ -88,29 +149,23 @@ export class EditorView {
     this.matches = [];
     this.matchIdx = 0;
     this.lastQuery = '';
-    const ta = document.getElementById('source') as HTMLTextAreaElement | null;
-    if (ta) ta.focus();
+    if (this.cmView) {
+      this.cmView.focus();
+    }
   }
 
   private selectCurrent(): void {
     const count = document.getElementById('find-count')!;
-    const ta = document.getElementById('source') as HTMLTextAreaElement | null;
-    if (this.matches.length === 0 || !ta) {
+    if (this.matches.length === 0 || !this.cmView) {
       count.textContent = this.lastQuery ? 'No results' : '';
       return;
     }
     const start = this.matches[this.matchIdx];
     const end = start + this.lastQuery.length;
-    ta.focus();
-    ta.setSelectionRange(start, end);
-    // Scroll match into view
-    const text = ta.value;
-    const lineIndex = text.slice(0, start).split('\n').length - 1;
-    const cs = getComputedStyle(ta);
-    const lhRaw = cs.lineHeight;
-    const fontSize = parseFloat(cs.fontSize) || 14;
-    const lineHeight = lhRaw === 'normal' ? fontSize * 1.5 : parseFloat(lhRaw);
-    ta.scrollTop = Math.max(0, lineIndex * lineHeight - ta.clientHeight / 2);
+    this.cmView.dispatch({
+      selection: { anchor: start, head: end },
+      scrollIntoView: true,
+    });
     count.textContent = `${this.matchIdx + 1} / ${this.matches.length}`;
     // Return focus to find input so user can keep typing/using Enter
     const input = document.getElementById('find-input') as HTMLInputElement | null;
@@ -125,14 +180,14 @@ export class EditorView {
 
   runFind(query: string): void {
     this.lastQuery = query;
-    const ta = document.getElementById('source') as HTMLTextAreaElement | null;
-    if (!ta) {
+    const text = this.cmView ? this.cmView.state.doc.toString() : '';
+    if (!this.cmView) {
       this.matches = [];
       const count = document.getElementById('find-count');
       if (count) count.textContent = query ? 'No results' : '';
       return;
     }
-    this.matches = findMatches(ta.value, query);
+    this.matches = findMatches(text, query);
     this.matchIdx = 0;
     this.selectCurrent();
   }
@@ -253,12 +308,28 @@ export class EditorView {
       content.appendChild(banner);
     }
     if (doc.view === 'source') {
-      const ta = document.createElement('textarea');
-      ta.id = 'source';
-      ta.value = doc.content;
-      ta.addEventListener('input', () => this.opts.onContentInput(ta.value));
-      content.appendChild(ta);
-      ta.focus();
+      const host = document.createElement('div');
+      host.className = 'editor-host';
+      content.appendChild(host);
+
+      this.cmView = new CMView({
+        doc: doc.content,
+        parent: host,
+        extensions: [
+          CMView.lineWrapping,
+          history(),
+          keymap.of([...defaultKeymap, ...historyKeymap]),
+          markdown(),
+          syntaxHighlighting(ledeHighlight),
+          ledeTheme,
+          CMView.updateListener.of((u) => {
+            if (u.docChanged) {
+              this.opts.onContentInput(u.state.doc.toString());
+            }
+          }),
+        ],
+      });
+      this.cmView.focus();
     } else {
       const pv = document.createElement('div');
       pv.id = 'preview';
