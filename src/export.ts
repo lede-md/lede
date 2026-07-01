@@ -22,8 +22,8 @@ h2{font-size:1.5em}
 h3{font-size:1.25em}
 h4,h5,h6{font-size:1em}
 p{margin:.75rem 0}
-a{color:#0070f3;text-decoration:none}
-a:hover{text-decoration:underline}
+a{color:#5a32d8;text-decoration:underline;text-underline-offset:2px}
+a:hover{opacity:.85}
 code{
   font-family:ui-monospace,"SFMono-Regular",Menlo,Monaco,Consolas,monospace;
   font-size:.875em;background:#f4f4f5;padding:.15em .35em;border-radius:4px;
@@ -58,6 +58,19 @@ ul,ol{margin:.75rem 0;padding-left:1.75rem}
 li{margin:.25rem 0}
 img{max-width:100%;height:auto;display:block}
 hr{border:none;border-top:1px solid #e5e7eb;margin:2rem 0}
+.lede-export li:has(> input[type="checkbox"]){list-style:none;margin-left:-1.1em}
+.lede-export input[type="checkbox"]{
+  appearance:none;-webkit-appearance:none;
+  width:15px;height:15px;margin:0 7px 0 0;vertical-align:-2px;
+  border:1.5px solid #d1d5db;border-radius:4px;
+  background:#fff;position:relative;cursor:default;
+}
+.lede-export input[type="checkbox"]:checked{background:#5a32d8;border-color:#5a32d8}
+.lede-export input[type="checkbox"]:checked::after{
+  content:"";position:absolute;left:4px;top:1px;
+  width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;
+  transform:rotate(45deg);
+}
 `.trim();
 
 export function buildStandaloneHtml(title: string, bodyHtml: string): string {
