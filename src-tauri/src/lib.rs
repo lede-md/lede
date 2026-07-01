@@ -85,15 +85,16 @@ pub fn run() {
                 }
                 tauri::RunEvent::ExitRequested { api, .. } => {
                     if !app.state::<ExitState>().0.load(Relaxed) {
-                        api.prevent_exit();
                         let windows = app.webview_windows();
                         let win = windows.values()
                             .find(|w| w.is_focused().unwrap_or(false))
                             .or_else(|| windows.values().next())
                             .cloned();
                         if let Some(w) = win {
+                            api.prevent_exit();
                             let _ = w.emit("confirm-quit", ());
                         }
+                        // no window → nothing to guard; let the exit proceed (do NOT prevent)
                     }
                 }
                 _ => {}

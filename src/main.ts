@@ -281,15 +281,16 @@ getCurrentWebviewWindow().onCloseRequested(async (event) => {
 // We set `quitting = true` so onCloseRequested doesn't also prompt.
 listen<void>('confirm-quit', async () => {
   quitting = true;
-  const dirty = tabs.docs.filter(d => d.dirty);
-  if (!dirty.length) {
-    await invoke('exit_app');
-    return;
-  }
-  if (await confirmDiscard(dirty.length)) {
-    await invoke('exit_app');
-  } else {
-    quitting = false; // user cancelled — reset so window-close guard works again
+  try {
+    const dirty = tabs.docs.filter((d) => d.dirty);
+    if (!dirty.length) { await invoke('exit_app'); return; }
+    if (await confirmDiscard(dirty.length)) {
+      await invoke('exit_app');
+    } else {
+      quitting = false; // user cancelled — reset so window-close guard works again
+    }
+  } catch {
+    quitting = false;   // never leave the guard stuck; user can retry ⌘Q
   }
 });
 
