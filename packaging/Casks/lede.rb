@@ -1,6 +1,6 @@
 cask "lede" do
-  version "0.1.2"
-  sha256 "c4b934b56373a6f7b57d7c1d45f074d1f8addaeff5d6c6dd852078c60375954f"
+  version "0.1.3"
+  sha256 "52e4089d639c54e57ebb9cc927a49c7c6b7a31b432c2cd7c99841f6cbf4826ba"
 
   url "https://github.com/lede-md/lede/releases/download/v#{version}/Lede_#{version}_aarch64.dmg"
   name "Lede"
