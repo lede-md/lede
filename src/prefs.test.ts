@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getPref, setPref, addRecentFile } from './prefs';
+import { getPref, setPref, addRecentFile, getSession, setSession } from './prefs';
 
 beforeEach(() => {
   localStorage.clear();
@@ -97,5 +97,31 @@ describe('addRecentFile', () => {
     const returned = addRecentFile('/x.md');
     const stored = getPref('recentFiles');
     expect(returned).toEqual(stored);
+  });
+});
+
+describe('session persistence', () => {
+  it('returns an empty session when nothing stored', () => {
+    expect(getSession()).toEqual({ paths: [], activePath: '' });
+  });
+
+  it('round-trips paths and activePath', () => {
+    setSession(['/a/one.md', '/b/two.md'], '/b/two.md');
+    expect(getSession()).toEqual({ paths: ['/a/one.md', '/b/two.md'], activePath: '/b/two.md' });
+  });
+
+  it('defaults session when the stored blob has no session key', () => {
+    localStorage.setItem('lede.prefs', JSON.stringify({ theme: 'dark' }));
+    expect(getSession()).toEqual({ paths: [], activePath: '' });
+  });
+
+  it('normalizes a corrupt/partial session to safe values', () => {
+    localStorage.setItem('lede.prefs', JSON.stringify({ session: { paths: 'nope' } }));
+    expect(getSession()).toEqual({ paths: [], activePath: '' });
+  });
+
+  it('does not disturb other prefs', () => {
+    setSession(['/a.md'], '/a.md');
+    expect(getSession().paths).toEqual(['/a.md']);
   });
 });

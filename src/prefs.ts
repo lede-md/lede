@@ -1,10 +1,16 @@
 export type ThemeName = 'system' | 'light' | 'dark';
 
+export interface SessionState {
+  paths: string[];
+  activePath: string;
+}
+
 export interface Prefs {
   theme: ThemeName;
   fontSize: number;
   footerVisible: boolean;
   recentFiles: string[];
+  session: SessionState;
 }
 
 const DEFAULTS: Prefs = {
@@ -12,6 +18,7 @@ const DEFAULTS: Prefs = {
   fontSize: 14,
   footerVisible: false,
   recentFiles: [],
+  session: { paths: [], activePath: '' },
 };
 
 const STORAGE_KEY = 'lede.prefs';
@@ -53,4 +60,18 @@ export function addRecentFile(path: string, max = 10): string[] {
   prefs.recentFiles = updated;
   saveAll(prefs);
   return updated;
+}
+
+export function getSession(): SessionState {
+  const s = loadAll().session as Partial<SessionState> | undefined;
+  return {
+    paths: Array.isArray(s?.paths) ? s!.paths.filter((p): p is string => typeof p === 'string') : [],
+    activePath: typeof s?.activePath === 'string' ? s.activePath : '',
+  };
+}
+
+export function setSession(paths: string[], activePath: string): void {
+  const prefs = loadAll();
+  prefs.session = { paths, activePath };
+  saveAll(prefs);
 }
