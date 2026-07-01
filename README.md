@@ -8,13 +8,49 @@ auto-reload when an agent changes the file on disk.
 
 ## Install
 
-1. Download `Lede.dmg` from Releases and drag **Lede** to Applications.
+### Homebrew (recommended)
+
+```sh
+brew install --cask lede-md/tap/lede
+```
+
+Homebrew adds the tap automatically. To add it explicitly first:
+
+```sh
+brew tap lede-md/tap
+brew install --cask lede
+```
+
+**First launch:** Lede is not notarized. Right-click **Lede.app → Open** and
+confirm, or run:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Lede.app
+```
+
+### Manual DMG
+
+1. Download `Lede.dmg` from [Releases](https://github.com/lede-md/lede/releases)
+   and drag **Lede** to Applications.
 2. First launch is blocked because the app is unsigned. Right-click
    **Lede.app → Open**, then confirm. (Or run
    `xattr -dr com.apple.quarantine /Applications/Lede.app`.)
 3. Optional CLI: `sudo cp cli/lede /usr/local/bin/lede`.
 
-Or via Homebrew: `brew install --cask lede-md/tap/lede`.
+## Upgrading
+
+**Homebrew:**
+
+```sh
+brew upgrade --cask lede
+```
+
+**In-app updater:** Lede → Check for Updates… installs the new version in place
+without leaving the terminal.
+
+> **For maintainers:** each new release requires bumping `version` and `sha256`
+> in `Casks/lede.rb` inside the [lede-md/homebrew-tap](https://github.com/lede-md/homebrew-tap)
+> repo. The release workflow prints the sha256 to use.
 
 ## Claude Code
 
@@ -29,7 +65,3 @@ project's `.claude/commands/`. Then `/lede path/to/file.md` opens it in the app.
 - `Cmd+E` toggle preview · `Cmd+S` save · `Cmd+T` new tab · `Cmd+N` new window
   · `Cmd+W` close tab.
 
-## Updates
-
-Lede checks for updates on demand (Lede → Check for Updates…) and installs
-them in place. Homebrew users can `brew upgrade`.
