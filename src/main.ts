@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import { open as openDialog, save as saveDialog, ask, message } from '@tauri-apps/plugin-dialog';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { check } from '@tauri-apps/plugin-updater';
+import { check, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { TabSet } from './tabs';
 import { Document } from './document';
@@ -165,6 +165,70 @@ actions.register('window.new', async () => {
   await invoke('open_new_window'); // defined in Task 12
 });
 
+// ---------------------------------------------------------------------------
+// Auto-update banner
+// ---------------------------------------------------------------------------
+let pendingUpdate: Update | null = null;
+let dismissedVersion: string | null = null;
+let shownBannerVersion: string | null = null;
+
+function showUpdateBanner(version: string): void {
+  const bannerEl = document.getElementById('update-banner') as HTMLElement;
+  // Guard: don't rebuild if already showing the same version.
+  if (!bannerEl.hidden && shownBannerVersion === version) return;
+
+  shownBannerVersion = version;
+
+  // Build children via DOM (no innerHTML interpolation for version string).
+  const msg = document.createElement('span');
+  msg.className = 'update-msg';
+  msg.textContent = `Lede ${version} is available`;
+
+  const applyBtn = document.createElement('button');
+  applyBtn.id = 'update-apply';
+  applyBtn.textContent = 'Update & Restart';
+
+  const dismissBtn = document.createElement('button');
+  dismissBtn.id = 'update-dismiss';
+  dismissBtn.textContent = '×';
+  dismissBtn.title = 'Dismiss';
+
+  bannerEl.replaceChildren(msg, applyBtn, dismissBtn);
+  bannerEl.hidden = false;
+
+  applyBtn.addEventListener('click', async () => {
+    if (!pendingUpdate) return;
+    applyBtn.disabled = true;
+    applyBtn.textContent = 'Updating…';
+    try {
+      await pendingUpdate.downloadAndInstall();
+      await relaunch();
+    } catch (err) {
+      console.error('Update failed:', err);
+      msg.textContent = 'Update failed — try: brew upgrade --cask lede';
+    }
+  });
+
+  dismissBtn.addEventListener('click', () => {
+    dismissedVersion = pendingUpdate?.version ?? null;
+    bannerEl.hidden = true;
+    shownBannerVersion = null;
+  });
+}
+
+async function checkForUpdate(): Promise<void> {
+  let update: Awaited<ReturnType<typeof check>>;
+  try {
+    update = await check();
+  } catch {
+    return; // silent on network/offline errors
+  }
+  if (!update) return;
+  if (update.version === dismissedVersion) return;
+  pendingUpdate = update;
+  showUpdateBanner(update.version);
+}
+
 actions.register('app.checkForUpdates', async () => {
   try {
     const update = await check();
@@ -298,3 +362,7 @@ listen<void>('confirm-quit', async () => {
 emit('frontend-ready');
 invoke('set_recent_files', { paths: getPref('recentFiles') });
 view.render();
+
+// Check for updates 3s after launch (non-blocking) and every 6h thereafter.
+setTimeout(() => { void checkForUpdate(); }, 3000);
+setInterval(() => { void checkForUpdate(); }, 6 * 60 * 60 * 1000);
