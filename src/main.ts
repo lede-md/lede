@@ -8,7 +8,7 @@ import { TabSet } from './tabs';
 import { Document } from './document';
 import { ActionRegistry } from './actions';
 import { EditorView } from './editor-view';
-import { getPref, setPref, addRecentFile } from './prefs';
+import { getPref, setPref, addRecentFile, getSession, setSession } from './prefs';
 import { applyTheme } from './theme';
 import hljs from 'highlight.js/lib/common';
 import { buildStandaloneHtml } from './export';
@@ -22,6 +22,10 @@ const tabs = new TabSet();
 const actions = new ActionRegistry();
 const contentEl = document.getElementById('content')!;
 let untitledSeq = 0;
+
+// Read the previous session ONCE at startup, before any view.render() can run —
+// saveSession() writes on tab changes, so a render must not clobber it first.
+const storedSession = getSession();
 
 let pendingReload: Set<string> = new Set();
 
@@ -55,6 +59,7 @@ const view = new EditorView(contentEl, tabs, {
   onActivate: (i) => {
     tabs.activate(i);
     view.render();
+    saveSession();
   },
   onClose: async (i) => { await closeTabAt(i); },
   renderMarkdown,
@@ -116,6 +121,7 @@ actions.register('document.save', async () => {
       // Refresh only the tab bar (name + dirty dot). Do NOT view.render():
       // rebuilding the CodeMirror view resets the caret to the start of the file.
       view.syncTabBar();
+      saveSession();
     }
   } else {
     await invoke('save_file', { path: d.path, content: d.content });
@@ -157,6 +163,7 @@ async function closeTabAt(i: number): Promise<void> {
     await invoke('unwatch_file', { path: closing.path });
   }
   await view.render();
+  saveSession();
 }
 
 actions.register('tab.close', async () => {
@@ -272,6 +279,31 @@ async function openPath(path: string): Promise<void> {
   tabs.open(new Document(path, content));
   if (!wasOpen) await invoke('watch_file', { path });
   await view.render();
+  saveSession();
+}
+
+function saveSession(): void {
+  const paths = tabs.docs.filter((d) => !d.isUntitled).map((d) => d.path);
+  const active = tabs.active;
+  const activePath = active && !active.isUntitled ? active.path : '';
+  setSession(paths, activePath);
+}
+
+async function restoreSession(): Promise<void> {
+  const { paths, activePath } = storedSession;
+  if (!paths.length) return;
+  for (const p of paths) {
+    try {
+      await openPath(p);
+    } catch {
+      // file missing/moved — skip it (drops out of the next saved session)
+    }
+  }
+  const ai = activePath ? tabs.findByPath(activePath) : -1;
+  if (ai >= 0) {
+    tabs.activate(ai);
+    await view.render();
+  }
 }
 
 listen<string>('open-file', async (e) => {
@@ -360,6 +392,13 @@ listen<void>('confirm-quit', async () => {
   } catch {
     quitting = false;   // never leave the guard stuck; user can retry ⌘Q
   }
+});
+
+// Restore the previous session on a bare launch (backend emits this only when it
+// flushed an empty launch queue). Registered before frontend-ready so the backend's
+// response cannot arrive before the listener exists.
+listen<void>('restore-session', () => {
+  restoreSession().catch(() => {});
 });
 
 // Tell the backend this window's frontend is ready to receive open-file events.
