@@ -1,6 +1,7 @@
 import { TabSet } from './tabs';
 import { countText } from './wordcount';
 import { findMatches } from './find';
+import hljs from 'highlight.js/lib/common';
 
 // CodeMirror 6 imports
 import { EditorView as CMView, keymap } from '@codemirror/view';
@@ -334,6 +335,9 @@ export class EditorView {
       const pv = document.createElement('div');
       pv.id = 'preview';
       pv.innerHTML = await this.opts.renderMarkdown(doc.content);
+      pv.querySelectorAll('pre code').forEach((el) => {
+        hljs.highlightElement(el as HTMLElement);
+      });
       content.appendChild(pv);
     }
   }
