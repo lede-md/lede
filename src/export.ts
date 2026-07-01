@@ -56,7 +56,7 @@ th{background:#f4f4f5;font-weight:600}
 tr:nth-child(even) td{background:#fafafa}
 ul,ol{margin:.75rem 0;padding-left:1.75rem}
 li{margin:.25rem 0}
-img{max-width:100%;height:auto;display:block}
+img{max-width:100%;height:auto;display:block;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.12)}
 hr{border:none;border-top:1px solid #e5e7eb;margin:2rem 0}
 .lede-export li:has(> input[type="checkbox"]){list-style:none;margin-left:-1.1em}
 .lede-export input[type="checkbox"]{
