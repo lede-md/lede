@@ -10,6 +10,7 @@ import { ActionRegistry } from './actions';
 import { EditorView } from './editor-view';
 import { getPref, setPref, addRecentFile } from './prefs';
 import { applyTheme } from './theme';
+import hljs from 'highlight.js/lib/common';
 import { buildStandaloneHtml } from './export';
 
 function applyFontSize(px: number): void {
@@ -87,7 +88,11 @@ actions.register('document.exportHtml', async () => {
   const body = await invoke<string>('render_markdown_cmd', { markdown: d.content });
   const name = d.isUntitled ? 'Untitled' : (d.path.split('/').pop() || 'document');
   const title = name.replace(/\.(md|markdown|mdown|txt)$/i, '');
-  const html = buildStandaloneHtml(title, body);
+  const tmp = document.createElement('div');
+  tmp.innerHTML = body;
+  tmp.querySelectorAll('pre code').forEach((el) => hljs.highlightElement(el as HTMLElement));
+  const highlightedBody = tmp.innerHTML;
+  const html = buildStandaloneHtml(title, highlightedBody);
   const target = await saveDialog({
     defaultPath: title + '.html',
     filters: [{ name: 'HTML', extensions: ['html'] }],

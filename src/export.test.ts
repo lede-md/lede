@@ -60,4 +60,9 @@ describe('buildStandaloneHtml', () => {
     expect(out).toContain('<p>AT&amp;T</p>');
     expect(out).not.toContain('&amp;amp;');
   });
+
+  it('contains hljs token CSS rules', () => {
+    const out = buildStandaloneHtml('Test', '<p>hi</p>');
+    expect(out).toContain('.hljs-keyword');
+  });
 });

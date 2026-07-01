@@ -33,6 +33,18 @@ pre{
   overflow-x:auto;line-height:1.5;
 }
 pre code{background:none;padding:0;font-size:.875em}
+/* highlight.js token colours — GitHub Light */
+.hljs{background:transparent}
+.hljs-comment,.hljs-quote{color:#6a737d;font-style:italic}
+.hljs-keyword,.hljs-selector-tag,.hljs-literal,.hljs-type{color:#d73a49}
+.hljs-string,.hljs-attr,.hljs-template-tag{color:#032f62}
+.hljs-number,.hljs-symbol{color:#005cc5}
+.hljs-title,.hljs-title.function_,.hljs-section{color:#6f42c1}
+.hljs-name,.hljs-tag{color:#22863a}
+.hljs-built_in,.hljs-title.class_{color:#e36209}
+.hljs-attribute,.hljs-variable,.hljs-meta{color:#e36209}
+.hljs-emphasis{font-style:italic}
+.hljs-strong{font-weight:bold}
 blockquote{
   margin:1rem 0;padding:.5rem 1rem;
   border-left:4px solid #d1d5db;color:#555;
