@@ -21,6 +21,10 @@ brew tap lede-md/tap
 brew install --cask lede
 ```
 
+> If Homebrew asks you to trust the tap before installing, run
+> `brew trust lede-md/tap` (or confirm the prompt) — this is Homebrew's standard
+> check for third-party taps.
+
 **First launch:** Lede is not notarized. Right-click **Lede.app → Open** and
 confirm, or run:
 
