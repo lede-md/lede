@@ -116,7 +116,21 @@ pub fn flush_pending<R: Runtime>(app: &AppHandle<R>) {
         let mut pending = state.pending.lock().unwrap_or_else(|e| e.into_inner());
         std::mem::take(&mut *pending)
     };
-    emit_to_window(app, paths);
+    if paths.is_empty() {
+        // Bare launch (no file args) — ask the frontend to restore its previous session.
+        // Only the first frontend-ready reaches here (compare_exchange gate above),
+        // so exactly one window restores.
+        let windows = app.webview_windows();
+        if let Some(win) = windows
+            .values()
+            .find(|w| w.is_focused().unwrap_or(false))
+            .or_else(|| windows.values().next())
+        {
+            let _ = win.emit("restore-session", ());
+        }
+    } else {
+        emit_to_window(app, paths);
+    }
 }
 
 #[tauri::command]
