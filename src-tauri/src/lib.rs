@@ -5,8 +5,17 @@ mod menu;
 mod routing;
 
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
 use watcher::WatchState;
 use tauri::{Emitter, Listener, Manager};
+
+pub struct ExitState(pub AtomicBool);
+
+#[tauri::command]
+fn exit_app(app: tauri::AppHandle, state: tauri::State<ExitState>) {
+    state.0.store(true, Relaxed);
+    app.exit(0);
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -21,6 +30,7 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(WatchState::new())
         .manage(routing::OpenState::new())
+        .manage(ExitState(AtomicBool::new(false)))
         .setup(|app| {
             let handle = app.handle();
             let m = menu::build_menu(handle, &[])?;
@@ -58,18 +68,35 @@ pub fn run() {
             watcher::watch_file,
             watcher::unwatch_file,
             routing::open_new_window,
-            menu::set_recent_files
+            menu::set_recent_files,
+            exit_app
         ])
         .build(tauri::generate_context!())
         .expect("error while building lede")
         .run(|app, event| {
-            if let tauri::RunEvent::Opened { urls } = event {
-                let paths: Vec<String> = urls
-                    .iter()
-                    .filter_map(|u| u.to_file_path().ok())
-                    .map(|p| p.to_string_lossy().to_string())
-                    .collect();
-                routing::route_open(app, paths, false);
+            match event {
+                tauri::RunEvent::Opened { urls } => {
+                    let paths: Vec<String> = urls
+                        .iter()
+                        .filter_map(|u| u.to_file_path().ok())
+                        .map(|p| p.to_string_lossy().to_string())
+                        .collect();
+                    routing::route_open(app, paths, false);
+                }
+                tauri::RunEvent::ExitRequested { api, .. } => {
+                    if !app.state::<ExitState>().0.load(Relaxed) {
+                        api.prevent_exit();
+                        let windows = app.webview_windows();
+                        let win = windows.values()
+                            .find(|w| w.is_focused().unwrap_or(false))
+                            .or_else(|| windows.values().next())
+                            .cloned();
+                        if let Some(w) = win {
+                            let _ = w.emit("confirm-quit", ());
+                        }
+                    }
+                }
+                _ => {}
             }
         });
 }

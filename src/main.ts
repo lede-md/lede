@@ -56,14 +56,7 @@ const view = new EditorView(contentEl, tabs, {
     tabs.activate(i);
     view.render();
   },
-  onClose: async (i) => {
-    const closing = tabs.docs[i];
-    tabs.close(i);
-    if (closing && !closing.isUntitled && tabs.findByPath(closing.path) < 0) {
-      await invoke('unwatch_file', { path: closing.path });
-    }
-    await view.render();
-  },
+  onClose: async (i) => { await closeTabAt(i); },
   renderMarkdown,
   footerVisible: () => getPref('footerVisible'),
   recentFiles: () => getPref('recentFiles'),
@@ -143,14 +136,28 @@ actions.register('tab.new', async () => {
   await view.render();
 });
 
+async function confirmDiscard(count: number): Promise<boolean> {
+  const msg =
+    count === 1
+      ? 'This tab has unsaved changes. Close without saving?'
+      : `You have ${count} tabs with unsaved changes. Close without saving?`;
+  return ask(msg, { title: 'Unsaved changes', kind: 'warning', okLabel: 'Discard', cancelLabel: 'Cancel' });
+}
+
+async function closeTabAt(i: number): Promise<void> {
+  const doc = tabs.docs[i];
+  if (doc?.dirty && !(await confirmDiscard(1))) return;
+  const closing = doc;
+  tabs.close(i);
+  if (closing && !closing.isUntitled && tabs.findByPath(closing.path) < 0) {
+    await invoke('unwatch_file', { path: closing.path });
+  }
+  await view.render();
+}
+
 actions.register('tab.close', async () => {
   if (tabs.activeIndex >= 0) {
-    const closing = tabs.docs[tabs.activeIndex];
-    tabs.close(tabs.activeIndex);
-    if (!closing.isUntitled && tabs.findByPath(closing.path) < 0) {
-      await invoke('unwatch_file', { path: closing.path });
-    }
-    await view.render();
+    await closeTabAt(tabs.activeIndex);
   }
 });
 
@@ -253,6 +260,37 @@ actions.register('recent.clear', () => {
   setPref('recentFiles', []);
   invoke('set_recent_files', { paths: [] });
   view.render();
+});
+
+// Window close guard (red button / ⌘⇧W).
+// `quitting` suppresses this guard when ⌘Q is in progress — the quit flow
+// handles the prompt itself, and we want a single dialog, not two.
+let quitting = false;
+getCurrentWebviewWindow().onCloseRequested(async (event) => {
+  if (quitting) return; // quit flow handles its own prompt
+  const dirty = tabs.docs.filter(d => d.dirty);
+  if (!dirty.length) return;
+  event.preventDefault();
+  if (await confirmDiscard(dirty.length)) {
+    await getCurrentWebviewWindow().destroy();
+  }
+});
+
+// Quit guard (⌘Q / system quit).
+// ExitRequested fires in Rust; it emits 'confirm-quit' to this window.
+// We set `quitting = true` so onCloseRequested doesn't also prompt.
+listen<void>('confirm-quit', async () => {
+  quitting = true;
+  const dirty = tabs.docs.filter(d => d.dirty);
+  if (!dirty.length) {
+    await invoke('exit_app');
+    return;
+  }
+  if (await confirmDiscard(dirty.length)) {
+    await invoke('exit_app');
+  } else {
+    quitting = false; // user cancelled — reset so window-close guard works again
+  }
 });
 
 // Tell the backend this window's frontend is ready to receive open-file events.
