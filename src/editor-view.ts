@@ -9,6 +9,7 @@ import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
+import { search, setSearchQuery, SearchQuery } from '@codemirror/search';
 
 // ---------------------------------------------------------------------------
 // Theme: maps our CSS variables into CodeMirror's styling system.
@@ -77,6 +78,7 @@ export class EditorView {
   private matchIdx = 0;
   private lastQuery = '';
   private cmView?: CMView;
+  private previewRanges: Range[] = [];
 
   constructor(
     private root: HTMLElement,
@@ -96,9 +98,22 @@ export class EditorView {
     this.matches = [];
     this.matchIdx = 0;
     this.lastQuery = '';
+    this.clearPreviewHighlights();
     this.renderTabBar();
     await this.renderContent();
     this.syncFooter();
+  }
+
+  private static highlightApiAvailable(): boolean {
+    return typeof CSS !== 'undefined' && !!(CSS as any).highlights && typeof Highlight !== 'undefined';
+  }
+
+  private clearPreviewHighlights(): void {
+    this.previewRanges = [];
+    if (EditorView.highlightApiAvailable()) {
+      (CSS as any).highlights?.delete('find');
+      (CSS as any).highlights?.delete('find-current');
+    }
   }
 
   syncFooter(): void {
@@ -150,14 +165,28 @@ export class EditorView {
     this.matches = [];
     this.matchIdx = 0;
     this.lastQuery = '';
+    this.clearPreviewHighlights();
     if (this.cmView) {
+      this.cmView.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: '' })) });
       this.cmView.focus();
     }
   }
 
   private selectCurrent(): void {
     const count = document.getElementById('find-count')!;
-    if (this.matches.length === 0 || !this.cmView) {
+    const doc = this.tabs.active;
+    if (this.matches.length === 0 || !doc) {
+      count.textContent = this.lastQuery ? 'No results' : '';
+      return;
+    }
+    if (doc.view === 'preview') {
+      this.selectCurrentPreview();
+      count.textContent = `${this.matchIdx + 1} / ${this.matches.length}`;
+      const input = document.getElementById('find-input') as HTMLInputElement | null;
+      if (input) input.focus();
+      return;
+    }
+    if (!this.cmView) {
       count.textContent = this.lastQuery ? 'No results' : '';
       return;
     }
@@ -173,6 +202,53 @@ export class EditorView {
     if (input) input.focus();
   }
 
+  private selectCurrentPreview(): void {
+    if (!EditorView.highlightApiAvailable()) return;
+    const cur = this.previewRanges[this.matchIdx];
+    if (!cur) return;
+    const all = new Highlight(...this.previewRanges);
+    (CSS as any).highlights.set('find', all);
+    const curHl = new Highlight(cur);
+    (curHl as any).priority = 1;
+    (CSS as any).highlights.set('find-current', curHl);
+    cur.startContainer.parentElement?.scrollIntoView({ block: 'center', behavior: 'auto' });
+  }
+
+  /** Build DOM Ranges for each match offset by walking #preview's text nodes. */
+  private buildPreviewRanges(root: HTMLElement, offsets: number[], length: number): Range[] {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes: { node: Text; start: number; end: number }[] = [];
+    let pos = 0;
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      const text = node as Text;
+      const len = text.data.length;
+      nodes.push({ node: text, start: pos, end: pos + len });
+      pos += len;
+    }
+
+    const findPoint = (offset: number): { node: Text; offset: number } | null => {
+      for (const n of nodes) {
+        if (offset >= n.start && offset <= n.end) {
+          return { node: n.node, offset: offset - n.start };
+        }
+      }
+      return null;
+    };
+
+    const ranges: Range[] = [];
+    for (const start of offsets) {
+      const startPoint = findPoint(start);
+      const endPoint = findPoint(start + length);
+      if (!startPoint || !endPoint) continue;
+      const range = new Range();
+      range.setStart(startPoint.node, startPoint.offset);
+      range.setEnd(endPoint.node, endPoint.offset);
+      ranges.push(range);
+    }
+    return ranges;
+  }
+
   gotoMatch(delta: number): void {
     if (this.matches.length === 0) return;
     this.matchIdx = (this.matchIdx + delta + this.matches.length) % this.matches.length;
@@ -181,24 +257,43 @@ export class EditorView {
 
   runFind(query: string): void {
     this.lastQuery = query;
-    const text = this.cmView ? this.cmView.state.doc.toString() : '';
+    const doc = this.tabs.active;
+    const count = document.getElementById('find-count');
+
+    if (doc && doc.view === 'preview') {
+      const pv = document.getElementById('preview') as HTMLElement | null;
+      if (!pv) {
+        this.matches = [];
+        this.previewRanges = [];
+        if (count) count.textContent = query ? 'No results' : '';
+        return;
+      }
+      const text = pv.textContent || '';
+      this.matches = findMatches(text, query);
+      this.matchIdx = 0;
+      this.previewRanges = EditorView.highlightApiAvailable()
+        ? this.buildPreviewRanges(pv, this.matches, query.length)
+        : [];
+      this.selectCurrent();
+      return;
+    }
+
     if (!this.cmView) {
       this.matches = [];
-      const count = document.getElementById('find-count');
       if (count) count.textContent = query ? 'No results' : '';
       return;
     }
+    const text = this.cmView.state.doc.toString();
     this.matches = findMatches(text, query);
     this.matchIdx = 0;
+    const searchQuery = query
+      ? new SearchQuery({ search: query, caseSensitive: false })
+      : new SearchQuery({ search: '' });
+    this.cmView.dispatch({ effects: setSearchQuery.of(searchQuery) });
     this.selectCurrent();
   }
 
   async openFind(): Promise<void> {
-    const doc = this.tabs.active;
-    if (doc && doc.view === 'preview') {
-      doc.view = 'source';
-      await this.render();
-    }
     const bar = document.getElementById('findbar') as HTMLElement;
     bar.hidden = false;
     const input = document.getElementById('find-input') as HTMLInputElement;
@@ -323,6 +418,7 @@ export class EditorView {
           markdown(),
           syntaxHighlighting(ledeHighlight),
           ledeTheme,
+          search(),
           CMView.updateListener.of((u) => {
             if (u.docChanged) {
               this.opts.onContentInput(u.state.doc.toString());
