@@ -113,12 +113,16 @@ actions.register('document.save', async () => {
       d.assignPath(target);
       d.markSaved();
       await invoke('watch_file', { path: target });
-      await view.render();
+      // Refresh only the tab bar (name + dirty dot). Do NOT view.render():
+      // rebuilding the CodeMirror view resets the caret to the start of the file.
+      view.syncTabBar();
     }
   } else {
     await invoke('save_file', { path: d.path, content: d.content });
     d.markSaved();
-    await view.render();
+    // Refresh only the tab bar (clears the dirty dot). Do NOT view.render():
+    // rebuilding the CodeMirror view resets the caret to the start of the file.
+    view.syncTabBar();
   }
 });
 
