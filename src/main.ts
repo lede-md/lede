@@ -26,6 +26,9 @@ let untitledSeq = 0;
 // Read the previous session ONCE at startup, before any view.render() can run —
 // saveSession() writes on tab changes, so a render must not clobber it first.
 const storedSession = getSession();
+// True only while restoreSession() is opening tabs, so the per-openPath saveSession()
+// doesn't persist a partial/mid-restore tab set (with the wrong active tab).
+let restoringSession = false;
 
 let pendingReload: Set<string> = new Set();
 
@@ -283,6 +286,7 @@ async function openPath(path: string): Promise<void> {
 }
 
 function saveSession(): void {
+  if (restoringSession) return;
   const paths = tabs.docs.filter((d) => !d.isUntitled).map((d) => d.path);
   const active = tabs.active;
   const activePath = active && !active.isUntitled ? active.path : '';
@@ -292,18 +296,27 @@ function saveSession(): void {
 async function restoreSession(): Promise<void> {
   const { paths, activePath } = storedSession;
   if (!paths.length) return;
-  for (const p of paths) {
-    try {
-      await openPath(p);
-    } catch {
-      // file missing/moved — skip it (drops out of the next saved session)
+  restoringSession = true;
+  try {
+    for (const p of paths) {
+      try {
+        await openPath(p);
+      } catch {
+        // file missing/moved — skip it (drops out of the next saved session)
+      }
     }
+    const ai = activePath ? tabs.findByPath(activePath) : -1;
+    if (ai >= 0) {
+      tabs.activate(ai);
+      await view.render();
+    }
+  } finally {
+    restoringSession = false;
   }
-  const ai = activePath ? tabs.findByPath(activePath) : -1;
-  if (ai >= 0) {
-    tabs.activate(ai);
-    await view.render();
-  }
+  // Persist the fully-restored state once, with the correct activePath. saveSession()
+  // is suppressed during the loop, so a crash mid-restore leaves the previous
+  // (complete) session intact rather than a truncated one.
+  saveSession();
 }
 
 listen<string>('open-file', async (e) => {
