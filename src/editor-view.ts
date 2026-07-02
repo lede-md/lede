@@ -171,6 +171,7 @@ export class EditorView {
       const name = doc.isUntitled
         ? `Untitled ${doc.path.replace('untitled-', '')}`
         : (doc.path.split('/').pop() || doc.path);
+      el.title = doc.isUntitled ? name : doc.path; // full absolute path on hover
       el.innerHTML = `<span class="dot"></span><span class="name"></span><span class="close">×</span>`;
       el.querySelector('.name')!.textContent = name;
       el.addEventListener('click', (e) => {
