@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import { open as openDialog, save as saveDialog, ask, message } from '@tauri-apps/plugin-dialog';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { homeDir } from '@tauri-apps/api/path';
 import { check, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { TabSet } from './tabs';
@@ -22,6 +23,9 @@ const tabs = new TabSet();
 const actions = new ActionRegistry();
 const contentEl = document.getElementById('content')!;
 let untitledSeq = 0;
+
+// Home directory, resolved once at startup and used to collapse footer paths to ~.
+let cachedHome = '';
 
 // Read the previous session ONCE at startup, before any view.render() can run —
 // saveSession() writes on tab changes, so a render must not clobber it first.
@@ -67,6 +71,7 @@ const view = new EditorView(contentEl, tabs, {
   onClose: async (i) => { await closeTabAt(i); },
   renderMarkdown,
   footerVisible: () => getPref('footerVisible'),
+  homeDir: () => cachedHome,
   recentFiles: () => getPref('recentFiles'),
   onOpenRecent: (p) => openPath(p).catch(() => {}),
   pendingReload: (path: string) => pendingReload.has(path),
@@ -124,6 +129,7 @@ actions.register('document.save', async () => {
       // Refresh only the tab bar (name + dirty dot). Do NOT view.render():
       // rebuilding the CodeMirror view resets the caret to the start of the file.
       view.syncTabBar();
+      view.syncFooter(); // path changed: Untitled → the saved file name
       saveSession();
     }
   } else {
@@ -332,6 +338,9 @@ getCurrentWebviewWindow().onDragDropEvent(async (event) => {
     }
   }
 });
+
+// Resolve the home dir once, then refresh the footer so paths collapse to ~.
+homeDir().then((h) => { cachedHome = h; view.syncFooter(); }).catch(() => {});
 
 // Apply persisted theme on launch.
 applyTheme(getPref('theme'));

@@ -1,7 +1,11 @@
 import { TabSet } from './tabs';
 import { countText } from './wordcount';
 import { findMatches } from './find';
+import { formatFooterPath } from './pathfmt';
 import hljs from 'highlight.js/lib/common';
+
+// Max characters for the footer path before middle-truncation.
+const FOOTER_PATH_MAX = 64;
 
 // CodeMirror 6 imports
 import { EditorView as CMView, keymap } from '@codemirror/view';
@@ -68,6 +72,7 @@ export interface EditorViewOpts {
   onReloadConfirm: (path: string) => void;
   onReloadDismiss: (path: string) => void;
   footerVisible: () => boolean;
+  homeDir: () => string;
   recentFiles: () => string[];
   onOpenRecent: (path: string) => void;
 }
@@ -119,12 +124,32 @@ export class EditorView {
   syncFooter(): void {
     const footer = document.getElementById('footer')!;
     const doc = this.tabs.active;
-    if (this.opts.footerVisible() && doc) {
-      const { words, chars } = countText(doc.content);
-      footer.textContent = `${words} words · ${chars} chars`;
-      footer.hidden = false;
-    } else {
+    footer.textContent = '';
+    // The footer is a persistent status bar whenever a document is open: it
+    // shows the file path on the left, and the word/char count on the right
+    // only when enabled. Hidden entirely in the empty state (no doc).
+    if (!doc) {
       footer.hidden = true;
+      return;
+    }
+    footer.hidden = false;
+
+    const pathSpan = document.createElement('span');
+    pathSpan.className = 'footer-path';
+    if (doc.isUntitled) {
+      pathSpan.textContent = `Untitled ${doc.path.replace('untitled-', '')}`;
+    } else {
+      pathSpan.textContent = formatFooterPath(doc.path, this.opts.homeDir(), FOOTER_PATH_MAX);
+      pathSpan.title = doc.path; // full absolute path on hover
+    }
+    footer.appendChild(pathSpan);
+
+    if (this.opts.footerVisible()) {
+      const { words, chars } = countText(doc.content);
+      const countSpan = document.createElement('span');
+      countSpan.className = 'footer-count';
+      countSpan.textContent = `${words} words · ${chars} chars`;
+      footer.appendChild(countSpan);
     }
   }
 

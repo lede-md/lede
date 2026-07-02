@@ -61,8 +61,10 @@ textarea#source { width: 100%; height: 100%; border: 0; outline: none; resize: n
 .empty-recent-item:hover { background: var(--tab-bg); }
 .empty-recent-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .empty-recent-dir { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-#footer { font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding: 4px 12px; text-align: right; font-variant-numeric: tabular-nums; background: var(--bg); display: block; }
+#footer { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding: 4px 12px; font-variant-numeric: tabular-nums; background: var(--bg); }
 #footer[hidden] { display: none; }
+.footer-path { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.footer-count { flex-shrink: 0; }
 #findbar { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--tab-bg); }
 #findbar[hidden] { display: none; }
 #find-input { flex: 1; min-width: 0; max-width: 260px; padding: 3px 7px; font-size: 13px; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 5px; outline: none; font-family: var(--font-ui); }
